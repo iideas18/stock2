@@ -71,7 +71,8 @@ class stock_web_module_data(metaclass=singleton_type):
             primary_key=[],
             is_realtime=True,
             order_columns=f"(SELECT `datetime` FROM `{tbs.TABLE_CN_STOCK_ATTENTION['name']}` WHERE `code`=`{tbs.TABLE_CN_STOCK_LIMITUP_REASON['name']}`.`code`) AS `cdatetime`",
-            order_by=" `cdatetime` DESC"
+            order_by=" `cdatetime` DESC",
+            url="/instock/data/limitup_reason/mindmap"
         ), wmd.web_module_data(
             mode="query",
             type="股票基本数据",
@@ -154,6 +155,17 @@ class stock_web_module_data(metaclass=singleton_type):
             is_realtime=True
         ), wmd.web_module_data(
             mode="query",
+            type="股票基本数据",
+            ico="fa fa-book",
+            name=tbs.TABLE_CN_POPULAR_STOCK['cn'],
+            table_name=tbs.TABLE_CN_POPULAR_STOCK['name'],
+            columns=tuple(tbs.TABLE_CN_POPULAR_STOCK['columns']),
+            column_names=tbs.get_field_cns(tbs.TABLE_CN_POPULAR_STOCK['columns']),
+            primary_key=[],
+            is_realtime=True,
+            order_by=" `POPULARITY_RANK` ASC"
+        ), wmd.web_module_data(
+            mode="query",
             type="股票指标数据",
             ico="fa fa-indent",
             name=tbs.TABLE_CN_STOCK_INDICATORS['cn'],
@@ -230,6 +242,23 @@ class stock_web_module_data(metaclass=singleton_type):
                     order_by=" `cdatetime` DESC"
                 )
             )
+
+        # External tool links
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="link",
+                type="AI",
+                ico="fa fa-magic",
+                name="AI 选股",
+                table_name="ai_xuangu",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="https://xuangu.eastmoney.com/",
+                open_in_new_tab=True,
+            )
+        )
         for tmp in self.data_list:
             _data[tmp.table_name] = tmp
         self.data = _data

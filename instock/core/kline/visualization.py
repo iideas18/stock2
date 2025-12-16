@@ -61,7 +61,7 @@ def get_plot_kline(code, stock, date, stock_name):
                 SaveTool(description="保存", filename=f"InStock_{code}({date})")
 
         # K线图
-        p_kline = figure(width=1000, height=300, x_range=(0, k_length + 1), y_range=(min_price, max_price), min_border_left=80,
+        p_kline = figure(width=1820, height=750, x_range=(0, k_length + 1), y_range=(min_price, max_price), min_border_left=80,
                          tools=tools, toolbar_location='above')
         # 均线
         sam_labels = ("close", "ma10", "ma20", "ma50", "ma200")
@@ -243,6 +243,9 @@ def get_plot_kline(code, stock, date, stock_name):
         div_dfcf_hq = Div(
             text=f"""<a href="https://quote.eastmoney.com/{code_name}.html" target="_blank">{code}{stock_name}行情</a>""",
             width=150)
+        div_find_scope = Div(
+            text=f"""<a href="https://gushitong.baidu.com/stock/ab-{code}" target="_blank">FindScope</a>""",
+            width=80)
         if code.startswith(('1', '5')):
             div_dfcf_zl = Div()
         else:
@@ -255,6 +258,7 @@ def get_plot_kline(code, stock, date, stock_name):
             div_dfcf_pj = Div(
                 text=f"""<a href="http://page1.tdx.com.cn:7615/site/pcwebcall_static/bxb/bxb.html?code={code}&color=0" target="_blank">扫雷评级</a>""",
                 width=80)
+        
         div_dfcf_pr = Div(
             text=f"""<a href="https://www.ljjyy.com/archives/2023/04/100718.html" target="_blank">形态</a>""",
             width=40)
@@ -262,7 +266,7 @@ def get_plot_kline(code, stock, date, stock_name):
         # 组合图
         layouts = layout(row(
             column(
-                row(children=[div_attention, div_dfcf_hq, div_dfcf_zl, div_dfcf_pj, div_dfcf_pr, select_all, select_none],align='end'),
+                row(children=[div_attention, div_dfcf_hq, div_find_scope, div_dfcf_zl, div_dfcf_pj, div_dfcf_pr, select_all, select_none],align='end'),
                 row(children=[p_kline, p_cyq]),
                 row(children=[column(p_volume, tabs_indicators),div_cyq])),
                 ck))

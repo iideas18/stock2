@@ -47,15 +47,59 @@
         sheet.options.allowAddNew = false; //hide new row
         sheet.setDefaultRowHeight(80, GC.Spread.Sheets.SheetArea.colHeader);
         sheet.applyTableTheme(GC.Spread.Sheets.Tables.TableThemes.light18)
-        if (colInfos[1].value == 'code') {
+
+        // Add hyperlink to the "代码" column (supports both `code` and `SECURITY_CODE`),
+        // without assuming fixed column positions.
+        const codeColIndex = colInfos.findIndex(c => c.value === 'code' || c.value === 'SECURITY_CODE');
+        if (codeColIndex >= 0) {
+            const dateColIndex = colInfos.findIndex(c => c.value === 'date' || c.value === 'datetime');
+            const nameColIndex = colInfos.findIndex(c => c.value === 'name' || c.value === 'SECURITY_NAME_ABBR');
+
             let hyperlinkStyle = new GC.Spread.Sheets.Style();
             let hl = new GC.Spread.Sheets.CellTypes.HyperLink();
             hl.onClickAction(function (cell) {
-                row = cell.row;
-                window.open('/instock/data/indicators?code=' + sheet.getSheet().getValue(row, 1) + '&date=' + (sheet.getSheet().getValue(row, 0)).format('yyyy-MM-dd') + '&name=' + sheet.getSheet().getValue(row, 2), '_blank');
+                const row = cell.row;
+                const codeVal = sheet.getSheet().getValue(row, codeColIndex);
+                const nameVal = nameColIndex >= 0 ? sheet.getSheet().getValue(row, nameColIndex) : '';
+
+                let dateStr = dateParam;
+                if (dateColIndex >= 0) {
+                    const dateVal = sheet.getSheet().getValue(row, dateColIndex);
+                    if (dateVal && typeof dateVal.format === 'function') {
+                        dateStr = dateVal.format('yyyy-MM-dd');
+                    } else if (dateVal) {
+                        dateStr = String(dateVal);
+                    }
+                }
+
+                window.open('/instock/data/indicators?code=' + codeVal + '&date=' + dateStr + '&name=' + nameVal, '_blank');
             });
             hyperlinkStyle.cellType = hl;
-            colInfos[1].style = hyperlinkStyle;
+            colInfos[codeColIndex].style = hyperlinkStyle;
+        }
+
+        // For 涨停原因揭密: make the "原因" column clickable to open a mindmap view.
+        const titleColIndex = colInfos.findIndex(c => c.value === 'TITLE');
+        if (titleColIndex >= 0 && codeColIndex >= 0) {
+            const dateColIndex = colInfos.findIndex(c => c.value === 'date' || c.value === 'datetime');
+            let hyperlinkStyle2 = new GC.Spread.Sheets.Style();
+            let hl2 = new GC.Spread.Sheets.CellTypes.HyperLink();
+            hl2.onClickAction(function (cell) {
+                const row = cell.row;
+                const codeVal = sheet.getSheet().getValue(row, codeColIndex);
+                let dateStr = dateParam;
+                if (dateColIndex >= 0) {
+                    const dateVal = sheet.getSheet().getValue(row, dateColIndex);
+                    if (dateVal && typeof dateVal.format === 'function') {
+                        dateStr = dateVal.format('yyyy-MM-dd');
+                    } else if (dateVal) {
+                        dateStr = String(dateVal);
+                    }
+                }
+                window.open('/instock/data/limitup_reason/mindmap?code=' + codeVal + '&date=' + dateStr, '_blank');
+            });
+            hyperlinkStyle2.cellType = hl2;
+            colInfos[titleColIndex].style = hyperlinkStyle2;
         }
         let statusBar = initStatusBar(spread);
         initSpread(spread, statusBar);

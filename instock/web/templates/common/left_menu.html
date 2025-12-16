@@ -76,7 +76,7 @@
                 {% except %}
                 {% end %}
                 <li class="{{ isActiveStr }}">
-                    <a href="{{ leftMenuTmp.url }}">
+                    <a href="{{ leftMenuTmp.url }}" {% if getattr(leftMenuTmp, 'open_in_new_tab', False) or getattr(leftMenuTmp, 'is_external', False) %}target="_blank" rel="noopener noreferrer"{% end %}>
                         <i class="menu-icon fa fa-caret-right"></i>
                         {{ leftMenuTmp.name }}
                     </a>

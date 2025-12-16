@@ -25,6 +25,27 @@ TABLE_CN_STOCK_ATTENTION = {'name': 'cn_stock_attention', 'cn': '我的关注',
                             'columns': {'datetime': {'type': DATETIME, 'cn': '日期', 'size': 0},
                                         'code': {'type': VARCHAR(6, _COLLATE), 'cn': '代码', 'size': 60}}}
 
+TABLE_CN_POPULAR_STOCK = {
+    "name": "cn_popular_stock",
+    "cn": "TOP100",
+    "columns": {
+        "POPULARITY_RANK": {"type": SmallInteger, "cn": "人气排名", "size": 100},
+        "SECURITY_CODE": {"type": VARCHAR(6, _COLLATE), "cn": "代码", "size": 60},
+        "SECURITY_NAME_ABBR": {"type": VARCHAR(20, _COLLATE), "cn": "名称", "size": 70},
+        "NEW_PRICE": {"type": FLOAT, "cn": "最新价", "size": 70},
+        "CHANGE_RATE": {"type": FLOAT, "cn": "涨跌幅", "size": 70},
+        "VOLUME_RATIO": {"type": FLOAT, "cn": "量比", "size": 70},
+        "HIGH_PRICE": {"type": FLOAT, "cn": "最高价", "size": 70},
+        "LOW_PRICE": {"type": FLOAT, "cn": "最低价", "size": 70},
+        "PRE_CLOSE_PRICE": {"type": FLOAT, "cn": "昨收", "size": 70},
+        "VOLUME": {"type": BIGINT, "cn": "成交量", "size": 90},
+        "DEAL_AMOUNT": {"type": BIGINT, "cn": "成交额", "size": 100},
+        "TURNOVERRATE": {"type": FLOAT, "cn": "换手率", "size": 70},
+        'date': {'type': DATE, 'cn': '日期', 'size': 0, 'map': 'MAX_TRADE_DATE'},
+    },
+}
+
+
 TABLE_CN_ETF_SPOT = {'name': 'cn_etf_spot', 'cn': '每日ETF数据',
                      'columns': {'date': {'type': DATE, 'cn': '日期', 'size': 0},
                                  'code': {'type': VARCHAR(6, _COLLATE), 'cn': '代码', 'size': 60},

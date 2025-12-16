@@ -7,10 +7,55 @@ https://quote.eastmoney.com/sh513500.html
 """
 from functools import lru_cache
 import math
+import logging
 import pandas as pd
 import requests
 from instock.core.singleton_proxy import proxys
 
+def fetch_popular_stocks_sorted() -> pd.DataFrame:
+    url = "https://data.eastmoney.com/dataapi/xuangu/list"
+    params = {
+        "st": "CHANGE_RATE",
+        "sr": "-1",
+        "ps": "100",
+        "p": "1",
+        "sty": "SECUCODE,SECURITY_CODE,SECURITY_NAME_ABBR,NEW_PRICE,CHANGE_RATE,VOLUME_RATIO,HIGH_PRICE,LOW_PRICE,PRE_CLOSE_PRICE,VOLUME,DEAL_AMOUNT,TURNOVERRATE,POPULARITY_RANK,MAX_TRADE_DATE",
+        "filter": "(POPULARITY_RANK>0)(POPULARITY_RANK<=100)",
+        "source": "SELECT_SECURITIES",
+        "client": "WEB"
+    }
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+    }
+
+    try:
+        response = requests.get(
+            url,
+            params=params,
+            headers=headers,
+            proxies=proxys().get_proxies(),
+            timeout=15,
+        )
+        response.raise_for_status()  # Raise an error for HTTP issues
+        data = response.json()  # Parse the JSON response
+
+        # Extract and structure the data
+        result = data.get("result") if isinstance(data, dict) else None
+        stocks = result.get("data") if isinstance(result, dict) else None
+        if isinstance(stocks, list):
+            # Sort by popularity_rank
+            sorted_stocks = sorted(stocks, key=lambda x: x.get("POPULARITY_RANK", float("inf")))
+            # Convert to DataFrame
+            df = pd.DataFrame(sorted_stocks)
+            return df
+        else:
+            logging.warning("fetch_popular_stocks_sorted: empty result payload")
+            return pd.DataFrame()
+    except (requests.exceptions.RequestException, ValueError) as e:
+        logging.warning(f"fetch_popular_stocks_sorted request/parse failed: {e}")
+        return pd.DataFrame()
 
 def fund_etf_spot_em() -> pd.DataFrame:
     """
@@ -341,7 +386,8 @@ def fund_etf_hist_min_em(
 if __name__ == "__main__":
     fund_etf_spot_em_df = fund_etf_spot_em()
     print(fund_etf_spot_em_df)
-
+    fetch_popular_stocks_sorted_df = fetch_popular_stocks_sorted()
+    
     fund_etf_hist_hfq_em_df = fund_etf_hist_em(
         symbol="513500",
         period="daily",

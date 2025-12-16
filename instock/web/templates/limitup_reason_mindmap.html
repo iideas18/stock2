@@ -1,0 +1,43 @@
+{% extends "layout/default.html" %}
+
+{% block main_content %}
+<link rel="stylesheet" href="/static/css/bootstrap-datepicker3.min.css" />
+<script src="/static/js/bootstrap-datepicker.min.js"></script>
+<script src="/static/js/bootstrap-datepicker.zh-CN.min.js"></script>
+
+<style>
+  .mindmap-wrap { height: 100%; width: 100%; }
+  .mindmap-wrap svg { width: 100%; height: calc(100vh - 90px); }
+</style>
+
+<div class="table-header" style="width:100%;height:35px;">
+  <div style="display:inline-block;float:left;height:100%;">
+    <div style="display:inline-block;float:left;text-overflow:ellipsis;white-space:nowrap;">
+      {{ web_module_data.name }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;日期：&nbsp;
+    </div>
+    <div style="display:inline-block;float:right;">
+      <input type="text" value="{{ date_now }}" id="dateid" class="input-group-sm form-control date-picker">
+    </div>
+  </div>
+</div>
+
+<div class="mindmap-wrap">
+  <pre class="markmap">{{ markdown }}</pre>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18.9"></script>
+
+<script type="text/javascript">
+  $(document).ready(function () {
+    $(".date-picker").datepicker({
+      language: 'zh-CN',
+      format: "yyyy-mm-dd",
+      autoclose: true,
+      todayHighlight: true
+    }).on('changeDate', function(ev){
+      const d = $('#dateid').val();
+      window.location = '/instock/data/limitup_reason/mindmap?date=' + d;
+    });
+  });
+</script>
+{% end %}

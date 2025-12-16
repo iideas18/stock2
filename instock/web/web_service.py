@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
-
+#%%
 import logging
 import os.path
 import sys
@@ -27,6 +27,7 @@ import instock.lib.version as version
 import instock.web.dataTableHandler as dataTableHandler
 import instock.web.dataIndicatorsHandler as dataIndicatorsHandler
 import instock.web.base as webBase
+import instock.web.limitupReasonMindmapHandler as limitupReasonMindmapHandler
 
 __author__ = 'myh '
 __date__ = '2023/3/10 '
@@ -43,6 +44,8 @@ class Application(tornado.web.Application):
             (r"/instock/data", dataTableHandler.GetStockHtmlHandler),
             # 获得股票指标数据。
             (r"/instock/data/indicators", dataIndicatorsHandler.GetDataIndicatorsHandler),
+            # 涨停原因揭密 mindmap
+            (r"/instock/data/limitup_reason/mindmap", limitupReasonMindmapHandler.LimitupReasonMindmapHandler),
             # 加入关注
             (r"/instock/control/attention", dataIndicatorsHandler.SaveCollectHandler),
         ]
@@ -84,3 +87,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# %%

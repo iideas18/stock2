@@ -89,6 +89,52 @@ def fetch_etfs(date):
         logging.error(f"stockfetch.fetch_etfs处理异常：{e}")
     return None
 
+# 读取当天股票数据
+def fetch_popular_stocks_sorted():
+    try:
+        data = fee.fetch_popular_stocks_sorted()
+        if data is None or len(data.index) == 0:
+            return None
+
+        # Rename upstream field to match our DB/web schema.
+        if 'MAX_TRADE_DATE' in data.columns and 'date' not in data.columns:
+            data = data.rename(columns={'MAX_TRADE_DATE': 'date'})
+
+        # Remove unwanted display/storage column.
+        if 'SECUCODE' in data.columns:
+            data = data.drop(columns=['SECUCODE'])
+
+        # Eastmoney sometimes returns string placeholders like '-' for numeric fields.
+        # Coerce to numeric so DB inserts into FLOAT/INT columns won't fail.
+        numeric_cols = [
+            'NEW_PRICE',
+            'CHANGE_RATE',
+            'VOLUME_RATIO',
+            'HIGH_PRICE',
+            'LOW_PRICE',
+            'PRE_CLOSE_PRICE',
+            'VOLUME',
+            'DEAL_AMOUNT',
+            'TURNOVERRATE',
+            'POPULARITY_RANK',
+        ]
+        for col in numeric_cols:
+            if col in data.columns:
+                data[col] = pd.to_numeric(data[col], errors='coerce')
+
+        # Reorder columns to match UI expectation (rank first).
+        desired_cols = list(tbs.TABLE_CN_POPULAR_STOCK['columns'].keys())
+        data = data.reindex(columns=[c for c in desired_cols if c in data.columns])
+
+        # Default sorting: rank increasing.
+        if 'POPULARITY_RANK' in data.columns:
+            data = data.sort_values(by='POPULARITY_RANK', ascending=True, kind='mergesort')
+
+        data = data.loc[data['NEW_PRICE'].apply(is_open)]
+        return data
+    except Exception as e:
+        logging.error(f"stockfetch.fetch_popular_stocks处理异常：{e}")
+    return None
 
 # 读取当天股票数据
 def fetch_stocks(date):

@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
-
+#%%
 import logging
 import os.path
 import sys
@@ -66,13 +66,40 @@ def save_nph_etf_spot_data(date, before=True):
     except Exception as e:
         logging.error(f"basic_data_daily_job.save_nph_etf_spot_data处理异常：{e}")
 
+# 基金实时行情数据。
+def save_nph_popular_spot_data(date, before=True):
+    if before:
+        return
+    # 股票列表
+    try:
+        data = stf.fetch_popular_stocks_sorted()
+        if data is None or len(data.index) == 0:
+            return
+
+        table_name = tbs.TABLE_CN_POPULAR_STOCK['name']
+        # 删除老数据。
+        print(f"popular data : {data}")
+        print(f"table name : {table_name}")
+        if mdb.checkTableIsExist(table_name):
+            del_sql = f"DELETE FROM `{table_name}` where `date` = '{date}'"
+            mdb.executeSql(del_sql)
+            cols_type = None
+        else:
+            cols_type = tbs.get_field_types(tbs.TABLE_CN_POPULAR_STOCK['columns'])
+
+        mdb.insert_db_from_df(data, table_name, cols_type, False, "`date`,`SECURITY_CODE`")
+    except Exception as e:
+        logging.error(f"basic_data_daily_job.save_nph_etf_spot_data处理异常：{e}")
 
 
 def main():
     runt.run_with_args(save_nph_stock_spot_data)
     runt.run_with_args(save_nph_etf_spot_data)
+    runt.run_with_args(save_nph_popular_spot_data)
 
 
 # main函数入口
 if __name__ == '__main__':
     main()
+
+# %%
