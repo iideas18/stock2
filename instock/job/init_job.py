@@ -42,6 +42,46 @@ def create_new_base_table():
                                   ) CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;"""
             db.execute(create_table_sql)
 
+            # Ensure commonly-used derived tables exist so the web UI / queries don't fail
+            # on a fresh database before the first successful ingestion.
+            create_chip_race_open_sql = """CREATE TABLE IF NOT EXISTS `cn_stock_chip_race_open` (
+                                  `date` date NOT NULL,
+                                  `code` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+                                  `name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+                                  `new_price` float DEFAULT NULL,
+                                  `change_rate` float DEFAULT NULL,
+                                  `pre_close_price` float DEFAULT NULL,
+                                  `open_price` float DEFAULT NULL,
+                                  `deal_amount` bigint DEFAULT NULL,
+                                  `bid_rate` float DEFAULT NULL,
+                                  `bid_trust_amount` bigint DEFAULT NULL,
+                                  `bid_deal_amount` bigint DEFAULT NULL,
+                                  `bid_ratio` float DEFAULT NULL,
+                                  PRIMARY KEY (`date`,`code`) USING BTREE,
+                                  INDEX `INIX_DATE`(`date`) USING BTREE,
+                                  INDEX `INIX_CODE`(`code`) USING BTREE
+                                  ) CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;"""
+            db.execute(create_chip_race_open_sql)
+
+            create_chip_race_end_sql = """CREATE TABLE IF NOT EXISTS `cn_stock_chip_race_end` (
+                                  `date` date NOT NULL,
+                                  `code` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+                                  `name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+                                  `new_price` float DEFAULT NULL,
+                                  `change_rate` float DEFAULT NULL,
+                                  `pre_close_price` float DEFAULT NULL,
+                                  `open_price` float DEFAULT NULL,
+                                  `deal_amount` bigint DEFAULT NULL,
+                                  `bid_rate` float DEFAULT NULL,
+                                  `bid_trust_amount` bigint DEFAULT NULL,
+                                  `bid_deal_amount` bigint DEFAULT NULL,
+                                  `bid_ratio` float DEFAULT NULL,
+                                  PRIMARY KEY (`date`,`code`) USING BTREE,
+                                  INDEX `INIX_DATE`(`date`) USING BTREE,
+                                  INDEX `INIX_CODE`(`code`) USING BTREE
+                                  ) CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;"""
+            db.execute(create_chip_race_end_sql)
+
 
 def check_database():
     with pymysql.connect(**mdb.MYSQL_CONN_DBAPI) as conn:

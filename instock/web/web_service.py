@@ -28,6 +28,7 @@ import instock.web.dataTableHandler as dataTableHandler
 import instock.web.dataIndicatorsHandler as dataIndicatorsHandler
 import instock.web.base as webBase
 import instock.web.limitupReasonMindmapHandler as limitupReasonMindmapHandler
+import instock.web.fetchHistHandler as fetchHistHandler
 
 __author__ = 'myh '
 __date__ = '2023/3/10 '
@@ -48,6 +49,16 @@ class Application(tornado.web.Application):
             (r"/instock/data/limitup_reason/mindmap", limitupReasonMindmapHandler.LimitupReasonMindmapHandler),
             # 加入关注
             (r"/instock/control/attention", dataIndicatorsHandler.SaveCollectHandler),
+
+            # 历史数据抓取控制面板（1年）
+            (r"/instock/control/fetch_hist", fetchHistHandler.FetchHistControlPanelHandler),
+            (r"/instock/api_fetch_hist_1y", fetchHistHandler.FetchHistOneYearApiHandler),
+
+            # 批量抓取历史数据 + 运行每日作业
+            (r"/instock/api_fetch_hist_batch_start", fetchHistHandler.FetchHistBatchStartHandler),
+            (r"/instock/api_fetch_hist_batch_status", fetchHistHandler.FetchHistBatchStatusHandler),
+            (r"/instock/api_run_daily_job_start", fetchHistHandler.RunDailyJobStartHandler),
+            (r"/instock/api_run_daily_job_status", fetchHistHandler.RunDailyJobStatusHandler),
         ]
         settings = dict(  # 配置
             template_path=os.path.join(os.path.dirname(__file__), "templates"),

@@ -4,9 +4,11 @@
 import logging
 import os
 import pymysql
+import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.types import NVARCHAR
 from sqlalchemy import inspect
+from sqlalchemy.sql.sqltypes import Float as SAFloat, Integer as SAInteger, Numeric as SANumeric, BigInteger as SABigInteger, SmallInteger as SASmallInteger
 
 __author__ = 'myh '
 __date__ = '2023/3/10 '
@@ -73,6 +75,30 @@ def insert_db_from_df(data, table_name, cols_type, write_index, primary_keys, in
 
 # 增加一个插入到其他数据库的方法。
 def insert_other_db_from_df(to_db, data, table_name, cols_type, write_index, primary_keys, indexs=None):
+    # Defensive cleanup: upstream providers sometimes return placeholders like '-'
+    # for numeric fields. Coerce numeric columns to numbers/NULL before insert.
+    if isinstance(data, pd.DataFrame) and cols_type:
+        try:
+            numeric_cols = []
+            for col_name, col_type in cols_type.items():
+                # col_type may be a SQLAlchemy type class or instance.
+                t = col_type if isinstance(col_type, type) else type(col_type)
+                if issubclass(t, (SAFloat, SAInteger, SANumeric, SABigInteger, SASmallInteger)):
+                    numeric_cols.append(col_name)
+
+            if numeric_cols:
+                data = data.copy()
+                for col in numeric_cols:
+                    if col not in data.columns:
+                        continue
+                    # Common placeholders -> NULL.
+                    data[col] = data[col].replace({'-': None, '—': None, '': None})
+                    data[col] = pd.to_numeric(data[col], errors='coerce')
+                    data[col] = data[col].where(pd.notnull(data[col]), None)
+        except Exception:
+            # Never block ingestion due to cleanup errors.
+            pass
+
     # 定义engine
     if to_db is None:
         engine_mysql = engine()

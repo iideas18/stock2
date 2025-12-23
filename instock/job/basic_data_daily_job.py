@@ -77,9 +77,6 @@ def save_nph_popular_spot_data(date, before=True):
             return
 
         table_name = tbs.TABLE_CN_POPULAR_STOCK['name']
-        # 删除老数据。
-        print(f"popular data : {data}")
-        print(f"table name : {table_name}")
         if mdb.checkTableIsExist(table_name):
             del_sql = f"DELETE FROM `{table_name}` where `date` = '{date}'"
             mdb.executeSql(del_sql)

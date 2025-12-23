@@ -1,0 +1,414 @@
+{% extends "layout/default.html" %}
+
+{% block main_content %}
+<link rel="stylesheet" href="/static/css/bootstrap-datepicker3.min.css" />
+<script src="/static/js/bootstrap-datepicker.min.js"></script>
+<script src="/static/js/bootstrap-datepicker.zh-CN.min.js"></script>
+
+<div class="page-content" style="height:100%;">
+  <h3 class="header smaller lighter">历史数据抓取（区间）</h3>
+
+  <div class="row" style="margin-bottom: 10px;">
+    <div class="col-xs-12 col-sm-10 col-md-8">
+      <div class="well" style="margin-bottom: 10px;">
+        <div class="form-inline">
+          <div class="form-group" style="margin-right: 10px;">
+            <label for="code">代码</label>
+            <input id="code" class="form-control input-sm" style="width: 120px;" placeholder="600000" />
+          </div>
+
+          <div class="form-group" style="margin-right: 10px;">
+            <label for="end_date">结束日期</label>
+            <input id="end_date" class="form-control input-sm date-picker" style="width: 140px;" value="{{ date_now }}" />
+          </div>
+
+          <div class="form-group" style="margin-right: 10px;">
+            <label for="start_date">开始日期</label>
+            <input id="start_date" class="form-control input-sm date-picker" style="width: 140px;" placeholder="留空=最近1年" />
+          </div>
+
+          <div class="form-group" style="margin-right: 10px;">
+            <label for="adjust">复权</label>
+            <select id="adjust" class="form-control input-sm" style="width: 90px;">
+              <option value="qfq" selected>前复权</option>
+              <option value="hfq">后复权</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-right: 10px;">
+            <label style="font-weight: normal;">
+              <input type="checkbox" id="only_missing" checked /> 仅缺失缓存
+            </label>
+          </div>
+
+          <button id="fetchBtn" class="btn btn-sm btn-primary">抓取</button>
+        </div>
+
+        <div id="msg" style="margin-top: 10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="table-responsive">
+        <table id="resultTable" class="table table-striped table-bordered table-hover" style="display:none;">
+          <thead><tr id="resultHead"></tr></thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  <h3 class="header smaller lighter">批量抓取全部股票</h3>
+  <div class="row" style="margin-bottom: 10px;">
+    <div class="col-xs-12 col-sm-10 col-md-10">
+      <div class="well" style="margin-bottom: 10px;">
+        <div class="form-inline">
+          <div class="form-group" style="margin-right: 10px;">
+            <label for="batch_end_date">结束日期</label>
+            <input id="batch_end_date" class="form-control input-sm date-picker" style="width: 140px;" value="{{ date_now }}" />
+          </div>
+          <div class="form-group" style="margin-right: 10px;">
+            <label for="batch_start_date">开始日期</label>
+            <input id="batch_start_date" class="form-control input-sm date-picker" style="width: 140px;" placeholder="留空=最近1年" />
+          </div>
+          <div class="form-group" style="margin-right: 10px;">
+            <label for="batch_adjust">复权</label>
+            <select id="batch_adjust" class="form-control input-sm" style="width: 90px;">
+              <option value="qfq" selected>前复权</option>
+              <option value="hfq">后复权</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-right: 10px;">
+            <label for="batch_workers">并发</label>
+            <input id="batch_workers" class="form-control input-sm" style="width: 80px;" value="8" />
+          </div>
+          <div class="form-group" style="margin-right: 10px;">
+            <label style="font-weight: normal;">
+              <input type="checkbox" id="batch_only_missing" checked /> 仅缺失缓存
+            </label>
+          </div>
+          <button id="batchStartBtn" class="btn btn-sm btn-warning">抓取全部</button>
+        </div>
+        <div id="batchMsg" style="margin-top: 10px;"></div>
+        <input type="hidden" id="batchJobId" />
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  <h3 class="header smaller lighter">运行每日作业</h3>
+  <div class="row" style="margin-bottom: 10px;">
+    <div class="col-xs-12 col-sm-10 col-md-10">
+      <div class="well" style="margin-bottom: 10px;">
+        <div class="form-inline" style="margin-bottom: 8px;">
+          <div class="form-group" style="margin-right: 10px;">
+            <label style="font-weight: normal;">
+              <input type="checkbox" id="daily_only_missing" checked /> 仅缺失缓存
+            </label>
+          </div>
+        </div>
+        <button id="dailyStartBtn" class="btn btn-sm btn-danger">运行 execute_daily_job.py</button>
+        <div id="dailyMsg" style="margin-top: 10px;"></div>
+        <div id="dailyLogLabel" style="margin-top:10px; display:none; color:#666;">日志预览（末尾20KB）</div>
+        <pre id="dailyLogTail" style="margin-top:10px; max-height:240px; overflow:auto; display:none;"></pre>
+        <input type="hidden" id="dailyJobId" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  const STORAGE_KEY = 'instock.fetch_hist_control.state.v1';
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveState(partial) {
+    try {
+      const cur = loadState();
+      const next = Object.assign({}, cur, partial);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function snapshotStateFromDom() {
+    return {
+      code: (document.getElementById('code') && document.getElementById('code').value) || '',
+      end_date: (document.getElementById('end_date') && document.getElementById('end_date').value) || '',
+      start_date: (document.getElementById('start_date') && document.getElementById('start_date').value) || '',
+      adjust: (document.getElementById('adjust') && document.getElementById('adjust').value) || 'qfq',
+      only_missing: (document.getElementById('only_missing') && document.getElementById('only_missing').checked) || false,
+
+      batch_end_date: (document.getElementById('batch_end_date') && document.getElementById('batch_end_date').value) || '',
+      batch_start_date: (document.getElementById('batch_start_date') && document.getElementById('batch_start_date').value) || '',
+      batch_adjust: (document.getElementById('batch_adjust') && document.getElementById('batch_adjust').value) || 'qfq',
+      batch_workers: (document.getElementById('batch_workers') && document.getElementById('batch_workers').value) || '8',
+      batch_only_missing: (document.getElementById('batch_only_missing') && document.getElementById('batch_only_missing').checked) || false,
+      batchJobId: (document.getElementById('batchJobId') && document.getElementById('batchJobId').value) || '',
+
+      daily_only_missing: (document.getElementById('daily_only_missing') && document.getElementById('daily_only_missing').checked) || false,
+      dailyJobId: (document.getElementById('dailyJobId') && document.getElementById('dailyJobId').value) || '',
+    };
+  }
+
+  function restoreStateToDom(state) {
+    if (state.code !== undefined) document.getElementById('code').value = state.code;
+    if (state.end_date !== undefined && state.end_date) document.getElementById('end_date').value = state.end_date;
+    if (state.start_date !== undefined) document.getElementById('start_date').value = state.start_date;
+    if (state.adjust !== undefined) document.getElementById('adjust').value = state.adjust;
+    if (state.only_missing !== undefined) document.getElementById('only_missing').checked = !!state.only_missing;
+
+    if (state.batch_end_date !== undefined && state.batch_end_date) document.getElementById('batch_end_date').value = state.batch_end_date;
+    if (state.batch_start_date !== undefined) document.getElementById('batch_start_date').value = state.batch_start_date;
+    if (state.batch_adjust !== undefined) document.getElementById('batch_adjust').value = state.batch_adjust;
+    if (state.batch_workers !== undefined) document.getElementById('batch_workers').value = state.batch_workers;
+    if (state.batch_only_missing !== undefined) document.getElementById('batch_only_missing').checked = !!state.batch_only_missing;
+    if (state.batchJobId !== undefined) document.getElementById('batchJobId').value = state.batchJobId;
+
+    if (state.daily_only_missing !== undefined) document.getElementById('daily_only_missing').checked = !!state.daily_only_missing;
+    if (state.dailyJobId !== undefined) document.getElementById('dailyJobId').value = state.dailyJobId;
+  }
+
+  function setMsg(html, isError) {
+    const el = document.getElementById('msg');
+    el.className = isError ? 'alert alert-danger' : 'alert alert-info';
+    el.innerHTML = html;
+  }
+
+  function renderTable(columns, rows) {
+    const table = document.getElementById('resultTable');
+    const head = document.getElementById('resultHead');
+    const body = document.getElementById('resultBody');
+
+    head.innerHTML = '';
+    body.innerHTML = '';
+
+    columns.forEach(c => {
+      const th = document.createElement('th');
+      th.textContent = c;
+      head.appendChild(th);
+    });
+
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      columns.forEach(c => {
+        const td = document.createElement('td');
+        const v = r[c];
+        td.textContent = (v === null || v === undefined) ? '' : String(v);
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+
+    table.style.display = rows.length ? '' : 'none';
+  }
+
+  $(document).ready(function () {
+    // Restore previous UI state and resume any in-progress jobs after refresh.
+    const saved = loadState();
+    restoreStateToDom(saved);
+
+    $( ".date-picker" ).datepicker({
+      language: 'zh-CN',
+      format: "yyyy-mm-dd",
+      showOtherMonths: true,
+      selectOtherMonths: false,
+      autoclose: true,
+      todayHighlight: true
+    });
+
+    // Persist state on changes.
+    const persist = function () { saveState(snapshotStateFromDom()); };
+    ['code','end_date','start_date','adjust','only_missing','batch_end_date','batch_start_date','batch_adjust','batch_workers','batch_only_missing','daily_only_missing']
+      .forEach(function(id){
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', persist);
+        el.addEventListener('keyup', persist);
+      });
+
+    window.addEventListener('beforeunload', function(){
+      saveState(snapshotStateFromDom());
+    });
+
+    document.getElementById('fetchBtn').onclick = function () {
+      const code = document.getElementById('code').value.trim();
+      const endDate = document.getElementById('end_date').value.trim();
+      const startDate = document.getElementById('start_date').value.trim();
+      const adjust = document.getElementById('adjust').value;
+      const onlyMissing = document.getElementById('only_missing').checked ? '1' : '0';
+
+      if (!code) {
+        setMsg('请填写股票代码。', true);
+        return;
+      }
+
+      setMsg('正在抓取，请稍候…', false);
+
+      // Save current inputs before request.
+      saveState(snapshotStateFromDom());
+
+      $.getJSON('/instock/api_fetch_hist_1y', { code: code, start_date: startDate, end_date: endDate, adjust: adjust, only_missing: onlyMissing })
+        .done(function (resp) {
+          if (!resp || !resp.ok) {
+            setMsg((resp && resp.error) ? resp.error : '抓取失败', true);
+            renderTable([], []);
+            return;
+          }
+
+          if (resp.skipped) {
+            setMsg('已存在缓存，已跳过：' + resp.code + '  ' + resp.start_date + ' ~ ' + resp.end_date, false);
+            renderTable([], []);
+            return;
+          }
+
+          setMsg('完成：' + resp.code + '  ' + resp.start_date + ' ~ ' + resp.end_date + '  共 ' + resp.rows + ' 条', false);
+          renderTable(resp.columns || [], resp.data || []);
+        })
+        .fail(function (xhr) {
+          let msg = '请求失败';
+          if (xhr && xhr.responseText) {
+            msg = xhr.responseText;
+          }
+          setMsg(msg, true);
+          renderTable([], []);
+        });
+    };
+
+    function setBatchMsg(html, isError) {
+      const el = document.getElementById('batchMsg');
+      el.className = isError ? 'alert alert-danger' : 'alert alert-info';
+      el.innerHTML = html;
+    }
+
+    function pollBatch() {
+      const jobId = document.getElementById('batchJobId').value;
+      if (!jobId) return;
+      $.getJSON('/instock/api_fetch_hist_batch_status', { job_id: jobId })
+        .done(function (resp) {
+          if (!resp || !resp.ok) {
+            setBatchMsg((resp && resp.error) ? resp.error : '查询失败', true);
+            return;
+          }
+          const j = resp.job;
+          const pct = j.total ? Math.floor((j.done * 100) / j.total) : 0;
+          let msg = '状态：' + j.state + ' | ' + j.done + '/' + j.total + ' (' + pct + '%)  成功:' + j.ok_count + '  失败:' + j.fail_count;
+          if (j.total_all !== undefined) msg += ' | 股票总数:' + j.total_all;
+          if (j.skipped !== undefined) msg += ' | 跳过(已有缓存):' + j.skipped;
+          if (j.finished_at) msg += ' | 完成时间：' + j.finished_at;
+          setBatchMsg(msg, j.state === 'failed');
+          if (j.state === 'running' || j.state === 'queued') {
+            setTimeout(pollBatch, 2000);
+          }
+        })
+        .fail(function (xhr) {
+          setBatchMsg(xhr && xhr.responseText ? xhr.responseText : '查询失败', true);
+        });
+    }
+
+    document.getElementById('batchStartBtn').onclick = function () {
+      const endDate = document.getElementById('batch_end_date').value.trim();
+      const startDate = document.getElementById('batch_start_date').value.trim();
+      const adjust = document.getElementById('batch_adjust').value;
+      const workers = document.getElementById('batch_workers').value.trim();
+      const onlyMissing = document.getElementById('batch_only_missing').checked ? '1' : '0';
+
+      setBatchMsg('正在启动批量任务…', false);
+      $.getJSON('/instock/api_fetch_hist_batch_start', { start_date: startDate, end_date: endDate, adjust: adjust, workers: workers, only_missing: onlyMissing })
+        .done(function (resp) {
+          if (!resp || !resp.ok) {
+            setBatchMsg((resp && resp.error) ? resp.error : '启动失败', true);
+            return;
+          }
+          document.getElementById('batchJobId').value = resp.job_id;
+          saveState({ batchJobId: resp.job_id });
+          setBatchMsg('已启动，任务ID：' + resp.job_id, false);
+          setTimeout(pollBatch, 500);
+        })
+        .fail(function (xhr) {
+          setBatchMsg(xhr && xhr.responseText ? xhr.responseText : '启动失败', true);
+        });
+    };
+
+    function setDailyMsg(html, isError) {
+      const el = document.getElementById('dailyMsg');
+      el.className = isError ? 'alert alert-danger' : 'alert alert-info';
+      el.innerHTML = html;
+    }
+
+    function pollDaily() {
+      const jobId = document.getElementById('dailyJobId').value;
+      if (!jobId) return;
+      $.getJSON('/instock/api_run_daily_job_status', { job_id: jobId, max_bytes: 20480 })
+        .done(function (resp) {
+          if (!resp || !resp.ok) {
+            setDailyMsg((resp && resp.error) ? resp.error : '查询失败', true);
+            return;
+          }
+          const j = resp.job;
+          const running = j.running ? '运行中' : ('已结束(exit=' + j.exit_code + ')');
+          setDailyMsg('状态：' + running + ' | pid=' + j.pid + ' | log=' + j.log_path, !j.running && j.exit_code);
+          const label = document.getElementById('dailyLogLabel');
+          const pre = document.getElementById('dailyLogTail');
+          label.style.display = '';
+          pre.style.display = '';
+          pre.textContent = j.log_tail || '';
+          if (j.running) {
+            setTimeout(pollDaily, 2000);
+          }
+        })
+        .fail(function (xhr) {
+          setDailyMsg(xhr && xhr.responseText ? xhr.responseText : '查询失败', true);
+        });
+    }
+
+    document.getElementById('dailyStartBtn').onclick = function () {
+      const onlyMissing = document.getElementById('daily_only_missing').checked ? '1' : '0';
+      setDailyMsg('正在启动每日作业…', false);
+      const label = document.getElementById('dailyLogLabel');
+      const pre = document.getElementById('dailyLogTail');
+      label.style.display = '';
+      pre.style.display = '';
+      pre.textContent = '等待日志输出…';
+      // Save UI state before starting.
+      saveState(snapshotStateFromDom());
+      $.getJSON('/instock/api_run_daily_job_start', { only_missing: onlyMissing })
+        .done(function (resp) {
+          if (!resp || !resp.ok) {
+            setDailyMsg((resp && resp.error) ? resp.error : '启动失败', true);
+            return;
+          }
+          document.getElementById('dailyJobId').value = resp.job.job_id;
+          saveState({ dailyJobId: resp.job.job_id });
+          setDailyMsg('已启动，任务ID：' + resp.job.job_id + ' | pid=' + resp.job.pid + ' | log=' + resp.job.log_path, false);
+          setTimeout(pollDaily, 500);
+        })
+        .fail(function (xhr) {
+          setDailyMsg(xhr && xhr.responseText ? xhr.responseText : '启动失败', true);
+        });
+    };
+
+    // Resume polling after refresh if there are stored job ids.
+    if ((document.getElementById('batchJobId').value || '').trim()) {
+      setTimeout(pollBatch, 200);
+    }
+    if ((document.getElementById('dailyJobId').value || '').trim()) {
+      setTimeout(pollDaily, 200);
+    }
+  });
+</script>
+{% end %}

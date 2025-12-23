@@ -8,6 +8,7 @@ import concurrent.futures
 import logging
 import os.path
 import sys
+import argparse
 
 # 在项目运行时，临时将项目路径添加到环境变量
 cpath_current = os.path.dirname(os.path.dirname(__file__))
@@ -18,21 +19,38 @@ if not os.path.exists(log_path):
     os.makedirs(log_path)
 logging.basicConfig(format='%(asctime)s %(message)s', filename=os.path.join(log_path, 'stock_execute_job.log'))
 logging.getLogger().setLevel(logging.INFO)
-import init_job as bj
-import basic_data_daily_job as hdj
-import basic_data_other_daily_job as hdtj
-import basic_data_after_close_daily_job as acdj
-import indicators_data_daily_job as gdj
-import strategy_data_daily_job as sdj
-import backtest_data_daily_job as bdj
-import klinepattern_data_daily_job as kdj
-import selection_data_daily_job as sddj
 
 __author__ = 'myh '
 __date__ = '2023/3/10 '
 
 
-def main():
+def _parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Run instock daily jobs")
+    parser.add_argument(
+        "--only-missing-cache",
+        action="store_true",
+        help="Use a stable history start date so cached hist data is reused across days (skip re-downloading due to shifting start_date)",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = _parse_args(argv)
+
+    if getattr(args, "only_missing_cache", False):
+        os.environ["INSTOCK_ONLY_MISSING_CACHE"] = "1"
+
+    # Delay imports until env vars are set.
+    import init_job as bj
+    import basic_data_daily_job as hdj
+    import basic_data_other_daily_job as hdtj
+    import basic_data_after_close_daily_job as acdj
+    import indicators_data_daily_job as gdj
+    import strategy_data_daily_job as sdj
+    import backtest_data_daily_job as bdj
+    import klinepattern_data_daily_job as kdj
+    import selection_data_daily_job as sddj
+
     start = time.time()
     _start = datetime.datetime.now()
     logging.info("######## 任务执行时间: %s #######" % _start.strftime("%Y-%m-%d %H:%M:%S.%f"))
@@ -63,4 +81,4 @@ def main():
 
 # main函数入口
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

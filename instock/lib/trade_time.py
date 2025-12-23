@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import os
 from instock.core.singleton_trade_date import stock_trade_date
 
 __author__ = 'myh '
@@ -113,7 +114,20 @@ def is_open(now_time):
 def get_trade_hist_interval(date):
     tmp_year, tmp_month, tmp_day = date.split("-")
     date_end = datetime.datetime(int(tmp_year), int(tmp_month), int(tmp_day))
+    # Default: rolling 3 years.
     date_start = (date_end + datetime.timedelta(days=-(365 * 3))).strftime("%Y%m%d")
+
+    # When enabled, use a stable start date (Jan 1, 3 years ago) to avoid
+    # generating a new cache folder for each run date.
+    only_missing_cache = str(os.getenv("INSTOCK_ONLY_MISSING_CACHE", "")).lower() not in (
+        "",
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+    if only_missing_cache:
+        date_start = f"{date_end.year - 3}0101"
 
     now_time = datetime.datetime.now()
     now_date = now_time.date()

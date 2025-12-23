@@ -259,6 +259,38 @@ class stock_web_module_data(metaclass=singleton_type):
                 open_in_new_tab=True,
             )
         )
+
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="link",
+                type="AI",
+                ico="fa fa-magic",
+                name="大盘云图",
+                table_name="ai_dapanyuntu",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="https://dapanyuntu.com/index.html",
+                open_in_new_tab=True,
+            )
+        )
+
+        # Control panel: fetch 1-year historical prices on demand.
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="control",
+                type="工具",
+                ico="fa fa-wrench",
+                name="历史数据抓取(区间)",
+                table_name="fetch_hist_1y",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="/instock/control/fetch_hist",
+            )
+        )
         for tmp in self.data_list:
             _data[tmp.table_name] = tmp
         self.data = _data
