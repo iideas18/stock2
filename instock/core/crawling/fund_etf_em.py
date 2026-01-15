@@ -5,12 +5,13 @@ Date: 2023/1/4 12:18
 Desc: 东方财富-ETF 行情
 https://quote.eastmoney.com/sh513500.html
 """
+import random
+import time
 from functools import lru_cache
 import math
 import logging
 import pandas as pd
-import requests
-from instock.core.singleton_proxy import proxys
+from instock.core.eastmoney_fetcher import eastmoney_fetcher
 
 def fetch_popular_stocks_sorted() -> pd.DataFrame:
     url = "https://data.eastmoney.com/dataapi/xuangu/list"
@@ -56,6 +57,11 @@ def fetch_popular_stocks_sorted() -> pd.DataFrame:
     except (requests.exceptions.RequestException, ValueError) as e:
         logging.warning(f"fetch_popular_stocks_sorted request/parse failed: {e}")
         return pd.DataFrame()
+__author__ = 'myh '
+__date__ = '2025/12/31 '
+
+# 创建全局实例，供所有函数使用
+fetcher = eastmoney_fetcher()
 
 def fund_etf_spot_em() -> pd.DataFrame:
     """
@@ -81,7 +87,7 @@ def fund_etf_spot_em() -> pd.DataFrame:
         "fields": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f22,f11,f62,f128,f136,f115,f152",
         "_": "1672806290972",
     }
-    r = requests.get(url, proxies = proxys().get_proxies(), params=params)
+    r =  fetcher.make_request(url, params=params)
     data_json = r.json()
 
     data = data_json["data"]["diff"]
@@ -91,9 +97,11 @@ def fund_etf_spot_em() -> pd.DataFrame:
     data_count = data_json["data"]["total"]
     page_count = math.ceil(data_count/page_size)
     while page_count > 1:
+        # 添加随机延迟，避免爬取过快
+        time.sleep(random.uniform(1, 1.5))
         page_current = page_current + 1
         params["pn"] = page_current
-        r = requests.get(url, proxies = proxys().get_proxies(), params=params)
+        r =  fetcher.make_request(url, params=params)
         data_json = r.json()
         _data = data_json["data"]["diff"]
         data.extend(_data)
@@ -175,7 +183,7 @@ def _fund_etf_code_id_map_em() -> dict:
         "fields": "f12,f13",
         "_": "1672806290972",
     }
-    r = requests.get(url, proxies = proxys().get_proxies(), params=params)
+    r =  fetcher.make_request(url, params=params)
     data_json = r.json()
     temp_df = pd.DataFrame(data_json["data"]["diff"])
     temp_dict = dict(zip(temp_df["f12"], temp_df["f13"]))
@@ -219,7 +227,7 @@ def fund_etf_hist_em(
         "end": end_date,
         "_": "1623766962675",
     }
-    r = requests.get(url, proxies = proxys().get_proxies(), params=params)
+    r =  fetcher.make_request(url, params=params)
     data_json = r.json()
     if not (data_json["data"] and data_json["data"]["klines"]):
         return pd.DataFrame()
@@ -293,7 +301,7 @@ def fund_etf_hist_min_em(
             "secid": f"{code_id_dict[symbol]}.{symbol}",
             "_": "1623766962675",
         }
-        r = requests.get(url, proxies = proxys().get_proxies(), params=params)
+        r =  fetcher.make_request(url, params=params)
         data_json = r.json()
         temp_df = pd.DataFrame(
             [item.split(",") for item in data_json["data"]["trends"]]
@@ -333,7 +341,7 @@ def fund_etf_hist_min_em(
             "end": "20500000",
             "_": "1630930917857",
         }
-        r = requests.get(url, proxies = proxys().get_proxies(), params=params)
+        r =  fetcher.make_request(url, params=params)
         data_json = r.json()
         temp_df = pd.DataFrame(
             [item.split(",") for item in data_json["data"]["klines"]]
@@ -398,7 +406,7 @@ if __name__ == "__main__":
     print(fund_etf_hist_hfq_em_df)
 
     fund_etf_hist_qfq_em_df = fund_etf_hist_em(
-        symbol="513500",
+        symbol="000001",
         period="daily",
         start_date="20000101",
         end_date="20230201",

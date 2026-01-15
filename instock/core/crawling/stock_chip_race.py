@@ -9,7 +9,8 @@ http://excalc.icfqs.com:7616/TQLEX?Entry=HQServ.hq_nlp
 import pandas as pd
 import requests
 from instock.core.singleton_proxy import proxys
-
+__author__ = 'myh '
+__date__ = '2025/2/26 '
 
 def _normalize_positional_df(df: pd.DataFrame, expected_cols) -> pd.DataFrame:
     """Normalize upstream DataFrame to a stable positional schema.
@@ -40,6 +41,7 @@ def _normalize_positional_df(df: pd.DataFrame, expected_cols) -> pd.DataFrame:
             out[col] = None
     return out[expected_cols]
 
+
 def stock_chip_race_open(date: str = "") -> pd.DataFrame:
     """
     通达信竞价抢筹_早盘抢筹
@@ -66,29 +68,20 @@ def stock_chip_race_open(date: str = "") -> pd.DataFrame:
     if not data:
         return pd.DataFrame()
     temp_df = pd.DataFrame(data)
-    temp_df = _normalize_positional_df(
-        temp_df,
-        [
-            "代码",
-            "名称",
-            "昨收",
-            "今开",
-            "开盘金额",
-            "抢筹幅度",
-            "抢筹委托金额",
-            "抢筹成交金额",
-            "最新价",
-            "_",
-        ],
-    )
-
-    temp_df["昨收"] = pd.to_numeric(temp_df["昨收"], errors="coerce") / 10000
-    temp_df["今开"] = pd.to_numeric(temp_df["今开"], errors="coerce") / 10000
-    temp_df["开盘金额"] = pd.to_numeric(temp_df["开盘金额"], errors="coerce")
-    temp_df["抢筹幅度"] = pd.to_numeric(temp_df["抢筹幅度"], errors="coerce")
-    temp_df["抢筹委托金额"] = pd.to_numeric(temp_df["抢筹委托金额"], errors="coerce")
-    temp_df["抢筹成交金额"] = pd.to_numeric(temp_df["抢筹成交金额"], errors="coerce")
-    temp_df["最新价"] = pd.to_numeric(temp_df["最新价"], errors="coerce")
+    temp_df.columns = [
+        "代码",
+        "名称",
+        "昨收",
+        "今开",
+        "开盘金额",
+        "抢筹幅度",
+        "抢筹委托金额",
+        "抢筹成交金额",
+        "最新价",
+        "_",
+        "天",
+        "板",
+    ]
 
     temp_df["抢筹幅度"] = round(temp_df["抢筹幅度"] * 100, 2)
     temp_df["最新价"] = round(temp_df["最新价"], 2)
@@ -108,6 +101,8 @@ def stock_chip_race_open(date: str = "") -> pd.DataFrame:
             "抢筹委托金额",
             "抢筹成交金额",
             "抢筹占比",
+            "天",
+            "板",
         ]
     ]
 
@@ -139,29 +134,20 @@ def stock_chip_race_end(date: str = "") -> pd.DataFrame:
     if not data:
         return pd.DataFrame()
     temp_df = pd.DataFrame(data)
-    temp_df = _normalize_positional_df(
-        temp_df,
-        [
-            "代码",
-            "名称",
-            "昨收",
-            "今开",
-            "收盘金额",
-            "抢筹幅度",
-            "抢筹委托金额",
-            "抢筹成交金额",
-            "最新价",
-            "_",
-        ],
-    )
-
-    temp_df["昨收"] = pd.to_numeric(temp_df["昨收"], errors="coerce") / 10000
-    temp_df["今开"] = pd.to_numeric(temp_df["今开"], errors="coerce") / 10000
-    temp_df["收盘金额"] = pd.to_numeric(temp_df["收盘金额"], errors="coerce")
-    temp_df["抢筹幅度"] = pd.to_numeric(temp_df["抢筹幅度"], errors="coerce")
-    temp_df["抢筹委托金额"] = pd.to_numeric(temp_df["抢筹委托金额"], errors="coerce")
-    temp_df["抢筹成交金额"] = pd.to_numeric(temp_df["抢筹成交金额"], errors="coerce")
-    temp_df["最新价"] = pd.to_numeric(temp_df["最新价"], errors="coerce")
+    temp_df.columns = [
+        "代码",
+        "名称",
+        "昨收",
+        "今开",
+        "收盘金额",
+        "抢筹幅度",
+        "抢筹委托金额",
+        "抢筹成交金额",
+        "最新价",
+        "_",
+        "天",
+        "板",
+    ]
 
     temp_df["抢筹幅度"] = round(temp_df["抢筹幅度"] * 100, 2)
     temp_df["最新价"] = round(temp_df["最新价"], 2)
@@ -181,6 +167,8 @@ def stock_chip_race_end(date: str = "") -> pd.DataFrame:
             "抢筹委托金额",
             "抢筹成交金额",
             "抢筹占比",
+            "天",
+            "板",
         ]
     ]
 

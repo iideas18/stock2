@@ -69,18 +69,14 @@ def main(argv=None):
         executor.submit(hdtj.main)
         print("股票其它基础数据表创建完成")
         # # 第3.2步创建股票指标数据表
-        executor.submit(gdj.main)
-        print("股票指标数据表创建完成")
+        # executor.submit(gdj.main)
         # # # # 第4步创建股票k线形态表
-        executor.submit(kdj.main)
-        print("股票k线形态数据表创建完成")
+        # executor.submit(kdj.main)
         # # # # 第5步创建股票策略数据表
-        executor.submit(sdj.main)
-        print("股票策略数据表创建完成")
+        # executor.submit(sdj.main)
 
     # # # # 第6步创建股票回测
-    bdj.main()
-    print("股票回测数据表创建完成")
+    # bdj.main()
 
     # # # # 第7步创建股票闭盘后才有的数据
     acdj.main()
