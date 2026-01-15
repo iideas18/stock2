@@ -84,7 +84,7 @@ class stock_web_module_data(metaclass=singleton_type):
             primary_key=[],
             is_realtime=True,
             order_columns=f"(SELECT `datetime` FROM `{tbs.TABLE_CN_STOCK_ATTENTION['name']}` WHERE `code`=`{tbs.TABLE_CN_STOCK_FUND_FLOW['name']}`.`code`) AS `cdatetime`",
-            order_by=" `cdatetime` DESC"
+            order_by=" `fund_amount` DESC"
         ), wmd.web_module_data(
             mode="query",
             type="股票基本数据",
@@ -108,7 +108,7 @@ class stock_web_module_data(metaclass=singleton_type):
             primary_key=[],
             is_realtime=True,
             order_columns=f"(SELECT `datetime` FROM `{tbs.TABLE_CN_STOCK_ATTENTION['name']}` WHERE `code`=`{tbs.TABLE_CN_STOCK_TOP['name']}`.`code`) AS `cdatetime`",
-            order_by=" `cdatetime` DESC"
+            order_by=" `change_rate` DESC"
         ), wmd.web_module_data(
             mode="query",
             type="股票基本数据",
@@ -275,7 +275,21 @@ class stock_web_module_data(metaclass=singleton_type):
                 open_in_new_tab=True,
             )
         )
-
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="link",
+                type="AI",
+                ico="fa fa-magic",
+                name="复盘盒子",
+                table_name="ai_fupanhezi",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="https://fupanhezi.com/h5/",
+                open_in_new_tab=True,
+            )
+        )
         # Control panel: fetch 1-year historical prices on demand.
         self.data_list.append(
             wmd.web_module_data(

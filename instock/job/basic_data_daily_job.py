@@ -91,8 +91,11 @@ def save_nph_popular_spot_data(date, before=True):
 
 def main():
     runt.run_with_args(save_nph_stock_spot_data)
+    print("股票实时行情数据保存完成")
     runt.run_with_args(save_nph_etf_spot_data)
+    print("基金实时行情数据保存完成")
     runt.run_with_args(save_nph_popular_spot_data)
+    print("热门股票实时行情数据保存完成")
 
 
 # main函数入口

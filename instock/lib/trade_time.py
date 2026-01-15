@@ -11,7 +11,7 @@ __date__ = '2023/4/10 '
 
 def is_trade_date(date=None):
     trade_date = stock_trade_date().get_data()
-    if trade_date is None:
+    if not trade_date:
         return False
     if date in trade_date:
         return True
@@ -21,25 +21,31 @@ def is_trade_date(date=None):
 
 def get_previous_trade_date(date):
     trade_date = stock_trade_date().get_data()
-    if trade_date is None:
+    if not trade_date:
         return date
     tmp_date = date
-    while True:
+    # Safety: if trade_date is unexpectedly missing dates, don't loop forever.
+    for _ in range(3660):  # ~10 years
         tmp_date += datetime.timedelta(days=-1)
         if tmp_date in trade_date:
             break
+    else:
+        return date
     return tmp_date
 
 
 def get_next_trade_date(date):
     trade_date = stock_trade_date().get_data()
-    if trade_date is None:
+    if not trade_date:
         return date
     tmp_date = date
-    while True:
+    # Safety: if trade_date is unexpectedly missing dates, don't loop forever.
+    for _ in range(3660):  # ~10 years
         tmp_date += datetime.timedelta(days=1)
         if tmp_date in trade_date:
             break
+    else:
+        return date
     return tmp_date
 
 

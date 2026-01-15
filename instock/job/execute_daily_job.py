@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
+#%%
 import time
 import datetime
 import concurrent.futures
@@ -31,7 +31,8 @@ def _parse_args(argv=None):
         action="store_true",
         help="Use a stable history start date so cached hist data is reused across days (skip re-downloading due to shifting start_date)",
     )
-    return parser.parse_args(argv)
+    args, _ = parser.parse_known_args()
+    return args
 
 
 def main(argv=None):
@@ -56,25 +57,34 @@ def main(argv=None):
     logging.info("######## 任务执行时间: %s #######" % _start.strftime("%Y-%m-%d %H:%M:%S.%f"))
     # 第1步创建数据库
     bj.main()
+    print("数据库创建完成")
     # 第2.1步创建股票基础数据表
     hdj.main()
+    print("股票基础数据表创建完成")
     # 第2.2步创建综合股票数据表
     sddj.main()
+    print("综合股票数据表创建完成")
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # # 第3.1步创建股票其它基础数据表
         executor.submit(hdtj.main)
+        print("股票其它基础数据表创建完成")
         # # 第3.2步创建股票指标数据表
         executor.submit(gdj.main)
+        print("股票指标数据表创建完成")
         # # # # 第4步创建股票k线形态表
         executor.submit(kdj.main)
+        print("股票k线形态数据表创建完成")
         # # # # 第5步创建股票策略数据表
         executor.submit(sdj.main)
+        print("股票策略数据表创建完成")
 
     # # # # 第6步创建股票回测
     bdj.main()
+    print("股票回测数据表创建完成")
 
     # # # # 第7步创建股票闭盘后才有的数据
     acdj.main()
+    print("股票闭盘后数据表创建完成")
 
     logging.info("######## 完成任务, 使用时间: %s 秒 #######" % (time.time() - start))
 
@@ -82,3 +92,5 @@ def main(argv=None):
 # main函数入口
 if __name__ == '__main__':
     main(sys.argv[1:])
+
+# %%

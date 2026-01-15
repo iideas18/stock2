@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
-
+#%%
 import logging
 import os.path
 import sys
@@ -59,9 +59,13 @@ def save_after_close_stock_chip_race_end_data(date):
 
 def main():
     runt.run_with_args(save_after_close_stock_blocktrade_data)
+    print("大宗交易数据保存完成")
     runt.run_with_args(save_after_close_stock_chip_race_end_data)
+    print("尾盘抢筹数据保存完成")
 
 
 # main函数入口
 if __name__ == '__main__':
     main()
+
+# %%

@@ -259,8 +259,9 @@ TABLE_CN_STOCK_TOP = {'name': 'cn_stock_top', 'cn': '股票龙虎榜',
                                   'sum_sell': {'type': FLOAT, 'cn': '累积卖出额', 'size': 100},
                                   'net_amount': {'type': FLOAT, 'cn': '净额', 'size': 100},
                                   'buy_seat': {'type': FLOAT, 'cn': '买入席位数', 'size': 100},
-                                  'sell_seat': {'type': FLOAT, 'cn': '卖出席位数', 'size': 100}}}
-
+                                  'sell_seat': {'type': FLOAT, 'cn': '卖出席位数', 'size': 100},
+                                  'change_rate': {'type': FLOAT, 'cn': '涨跌幅', 'size': 70},
+                                  }}
 TABLE_CN_STOCK_BLOCKTRADE = {'name': 'cn_stock_blocktrade', 'cn': '股票大宗交易',
                              'columns': {'date': {'type': DATE, 'cn': '日期', 'size': 0},
                                          'code': {'type': VARCHAR(6, _COLLATE), 'cn': '代码', 'size': 60},

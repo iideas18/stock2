@@ -107,6 +107,56 @@ def insert_other_db_from_df(to_db, data, table_name, cols_type, write_index, pri
     # 使用 http://docs.sqlalchemy.org/en/latest/core/reflection.html
     # 使用检查检查数据库表是否有主键。
     ipt = inspect(engine_mysql)
+
+    # If table already exists, ensure it has all required columns.
+    # This prevents failures when upstream schemas add new fields.
+    try:
+        if ipt.has_table(table_name, schema=to_db):
+            existing_cols = {c.get('name') for c in ipt.get_columns(table_name, schema=to_db)}
+            df_cols = set(data.columns.tolist()) if isinstance(data, pd.DataFrame) else set()
+            missing = [c for c in df_cols if c not in existing_cols]
+            if missing:
+                def _mysql_type(col_name: str) -> str:
+                    if cols_type and col_name in cols_type:
+                        ct = cols_type[col_name]
+                        t = ct if isinstance(ct, type) else type(ct)
+                        tn = t.__name__.lower()
+                        if 'varchar' in tn:
+                            # Default to varchar(255) if length not introspectable.
+                            try:
+                                length = getattr(ct, 'length', None)
+                            except Exception:
+                                length = None
+                            return f"varchar({int(length)})" if length else "varchar(255)"
+                        if 'date' == tn:
+                            return "date"
+                        if 'datetime' in tn:
+                            return "datetime(0)"
+                        if 'bigint' in tn:
+                            return "bigint"
+                        if 'smallinteger' in tn or 'smallint' in tn:
+                            return "smallint"
+                        if 'integer' in tn or tn == 'int':
+                            return "int"
+                        if 'numeric' in tn or 'decimal' in tn:
+                            return "decimal(20,6)"
+                        if 'float' in tn or 'double' in tn:
+                            return "float"
+                        if 'bit' in tn:
+                            return "bit(1)"
+                    return "varchar(255)"
+
+                with get_connection() as conn:
+                    with conn.cursor() as db:
+                        for col in missing:
+                            ddl_type = _mysql_type(col)
+                            try:
+                                db.execute(f"ALTER TABLE `{table_name}` ADD COLUMN `{col}` {ddl_type} NULL")
+                            except Exception as e:
+                                logging.error(f"database.insert_other_db_from_df处理异常：{table_name}表新增字段{col}失败：{e}")
+    except Exception as e:
+        logging.error(f"database.insert_other_db_from_df处理异常：{table_name}表字段检查失败：{e}")
+
     col_name_list = data.columns.tolist()
     # 如果有索引，把索引增加到varchar上面。
     if write_index:

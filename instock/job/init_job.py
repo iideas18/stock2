@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 
-
+#%%
 import logging
 import pymysql
 import os.path
@@ -97,7 +97,11 @@ def main():
         logging.error("执行信息：数据库不存在，将创建。")
         # 检查数据库失败，
         create_new_database()
-    # 执行数据初始化。
+    # 执行数据初始化（确保基础表存在）。
+    try:
+        create_new_base_table()
+    except Exception as e:
+        logging.error(f"init_job.main 初始化基础表异常：{e}")
 
 
 # main函数入口

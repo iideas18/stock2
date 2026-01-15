@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
-
+#%%
 import logging
 import concurrent.futures
 import os.path
@@ -38,6 +38,22 @@ def save_nph_stock_top_data(date, before=True):
         else:
             cols_type = tbs.get_field_types(tbs.TABLE_CN_STOCK_TOP['columns'])
         mdb.insert_db_from_df(data, table_name, cols_type, False, "`date`,`code`")
+
+        # Sina LHB "个股上榜统计" does not provide daily change_rate.
+        # After inserting, backfill change_rate from our daily spot table (TABLE_CN_STOCK_SPOT).
+        try:
+            date_str = date.strftime("%Y-%m-%d") if hasattr(date, "strftime") else str(date)
+            spot_table = tbs.TABLE_CN_STOCK_SPOT['name']
+            if mdb.checkTableIsExist(spot_table) and mdb.checkTableIsExist(table_name):
+                update_sql = (
+                    f"UPDATE `{table_name}` t "
+                    f"JOIN `{spot_table}` s ON t.`date` = s.`date` AND t.`code` = s.`code` "
+                    f"SET t.`change_rate` = s.`change_rate` "
+                    f"WHERE t.`date` = '{date_str}' AND t.`change_rate` IS NULL"
+                )
+                mdb.executeSql(update_sql)
+        except Exception as e:
+            logging.error(f"basic_data_other_daily_job.save_stock_top_data 回填change_rate异常：{e}")
     except Exception as e:
         logging.error(f"basic_data_other_daily_job.save_stock_top_data处理异常：{e}")
     stock_spot_buy(date)
@@ -212,7 +228,8 @@ def stock_spot_buy(date):
 
         sql = f'''SELECT * FROM `{_table_name}` WHERE `date` = '{date}' and 
                 `pe9` > 0 and `pe9` <= 20 and `pbnewmrq` <= 10 and `roe_weight` >= 15'''
-        data = pd.read_sql(sql=sql, con=mdb.engine())
+        with mdb.get_connection() as conn:
+            data = pd.read_sql(sql=sql, con=conn)
         data = data.drop_duplicates(subset="code", keep="last")
         if len(data.index) == 0:
             return
@@ -253,7 +270,7 @@ def stock_chip_race_open_data(date):
 
 
 # 每日涨停原因
-def stock_imitup_reason_data(date):
+def stock_limitup_reason_data(date):
     try:
         data = stf.fetch_stock_limitup_reason(date)
         if data is None or len(data.index) == 0:
@@ -270,17 +287,25 @@ def stock_imitup_reason_data(date):
 
         mdb.insert_db_from_df(data, table_name, cols_type, False, "`date`,`code`")
     except Exception as e:
-        logging.error(f"basic_data_other_daily_job.stock_imitup_reason_data：{e}")
+        logging.error(f"basic_data_other_daily_job.stock_limitup_reason_data：{e}")
 
 def main():
+    print("开始执行股票其它基础数据表每日任务")
     runt.run_with_args(save_nph_stock_top_data)
+    print("股票龙虎榜数据表每日任务完成")
     runt.run_with_args(save_nph_stock_bonus)
+    print("股票分红配送数据表每日任务完成") 
     runt.run_with_args(save_nph_stock_fund_flow_data)
+    print("股票资金流向数据表每日任务完成")
     runt.run_with_args(save_nph_stock_sector_fund_flow_data)
+    print("股票板块资金流向数据表每日任务完成")
     runt.run_with_args(stock_chip_race_open_data)
-    runt.run_with_args(stock_imitup_reason_data)
-
+    print("股票早盘抢筹数据表每日任务完成")
+    runt.run_with_args(stock_limitup_reason_data)
+    print("股票每日涨停原因数据表完成")
 
 # main函数入口
 if __name__ == '__main__':
     main()
+
+ # %%

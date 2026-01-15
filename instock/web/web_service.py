@@ -24,6 +24,7 @@ logging.getLogger().setLevel(logging.ERROR)
 import instock.lib.torndb as torndb
 import instock.lib.database as mdb
 import instock.lib.version as version
+import instock.job.init_job as init_job
 import instock.web.dataTableHandler as dataTableHandler
 import instock.web.dataIndicatorsHandler as dataIndicatorsHandler
 import instock.web.base as webBase
@@ -69,6 +70,12 @@ class Application(tornado.web.Application):
             debug=True,
         )
         super(Application, self).__init__(handlers, **settings)
+
+        # Ensure required tables exist (safe: uses CREATE TABLE IF NOT EXISTS).
+        try:
+            init_job.main()
+        except Exception as e:
+            logging.error(f"web_service.Application 初始化数据库表异常：{e}")
         # Have one global connection to the blog DB across all handlers
         self.db = torndb.Connection(**mdb.MYSQL_CONN_TORNDB)
 

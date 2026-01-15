@@ -45,6 +45,7 @@ def save_nph_stock_selection_data(date, before=True):
 
 def main():
     runt.run_with_args(save_nph_stock_selection_data)
+    print("股票精选数据保存完成")
 
 
 # main函数入口

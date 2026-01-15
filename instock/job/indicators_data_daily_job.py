@@ -96,7 +96,8 @@ def guess_buy(date):
         sql = f'''SELECT `{_selcol}` FROM `{_table_name}` WHERE `date` = '{date}' and 
                 `kdjk` >= 80 and `kdjd` >= 70 and `kdjj` >= 100 and `rsi_6` >= 80 and 
                 `cci` >= 100 and `cr` >= 300 and `wr_6` >= -20 and `vr` >= 160'''
-        data = pd.read_sql(sql=sql, con=mdb.engine())
+        with mdb.get_connection() as conn:
+            data = pd.read_sql(sql=sql, con=conn)
         data = data.drop_duplicates(subset="code", keep="last")
         # data.set_index('code', inplace=True)
 
@@ -131,7 +132,8 @@ def guess_sell(date):
         sql = f'''SELECT `{_selcol}` FROM `{_table_name}` WHERE `date` = '{date}' and 
                 `kdjk` < 20 and `kdjd` < 30 and `kdjj` < 10 and `rsi_6` < 20 and 
                 `cci` < -100 and `cr` < 40 and `wr_6` < -80 and `vr` < 40'''
-        data = pd.read_sql(sql=sql, con=mdb.engine())
+        with mdb.get_connection() as conn:
+            data = pd.read_sql(sql=sql, con=conn)
         data = data.drop_duplicates(subset="code", keep="last")
         # data.set_index('code', inplace=True)
         if len(data.index) == 0:
@@ -156,6 +158,7 @@ def guess_sell(date):
 def main():
     # 使用方法传递。
     runt.run_with_args(prepare)
+    print("股票指标数据表每日任务完成")
     # 二次筛选数据。直接计算买卖股票数据。
     runt.run_with_args(guess_buy)
     runt.run_with_args(guess_sell)

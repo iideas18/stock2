@@ -59,6 +59,31 @@ def is_open_with_line(price):
     return price != '-'
 
 
+def _ensure_schema_columns(df: pd.DataFrame, schema_columns, rename_map=None) -> pd.DataFrame:
+    """Return a DataFrame aligned to schema column order.
+
+    - Optionally renames upstream columns (e.g., Chinese headers) to schema names.
+    - Adds any missing schema columns filled with None.
+    - Drops any extra columns not in schema.
+    """
+    if df is None:
+        return None
+    if not isinstance(df, pd.DataFrame):
+        return df
+
+    data = df.copy()
+    if rename_map:
+        safe_map = {k: v for k, v in rename_map.items() if k in data.columns}
+        if safe_map:
+            data = data.rename(columns=safe_map)
+
+    for col in schema_columns:
+        if col not in data.columns:
+            data[col] = None
+
+    return data[list(schema_columns)]
+
+
 # 读取股票交易日历数据
 def fetch_stocks_trade_date():
     try:
@@ -252,15 +277,37 @@ def fetch_stock_top_data(date):
         data = sls.stock_lhb_ggtj_sina()
         if data is None or len(data.index) == 0:
             return None
-        _columns = list(tbs.TABLE_CN_STOCK_TOP['columns'])
-        _columns.pop(0)
-        data.columns = _columns
+
+        # Upstream (sina) returns Chinese headers; map to our DB/web schema.
+        data = _ensure_schema_columns(
+            data,
+            schema_columns=['code', 'name', 'ranking_times', 'sum_buy', 'sum_sell', 'net_amount', 'buy_seat', 'sell_seat', 'change_rate'],
+            rename_map={
+                '股票代码': 'code',
+                '股票名称': 'name',
+                '上榜次数': 'ranking_times',
+                '累积购买额': 'sum_buy',
+                '累积卖出额': 'sum_sell',
+                '净额': 'net_amount',
+                '买入席位数': 'buy_seat',
+                '卖出席位数': 'sell_seat',
+                # Some providers might include a change-rate-like field in the future.
+                '涨跌幅': 'change_rate',
+            },
+        )
+
         data = data.loc[data['code'].apply(is_a_stock)]
         data.drop_duplicates('code', keep='last', inplace=True)
         if date is None:
             data.insert(0, 'date', datetime.datetime.now().strftime("%Y-%m-%d"))
         else:
             data.insert(0, 'date', date.strftime("%Y-%m-%d"))
+
+        # Final alignment to table schema order.
+        data = _ensure_schema_columns(
+            data,
+            schema_columns=list(tbs.TABLE_CN_STOCK_TOP['columns']),
+        )
         return data
     except Exception as e:
         logging.error(f"stockfetch.fetch_stock_top_data处理异常：{e}")
@@ -301,7 +348,25 @@ def fetch_stock_chip_race_open(date):
             data.insert(0, 'date', datetime.datetime.now().strftime("%Y-%m-%d"))
         else:
             data.insert(0, 'date', date.strftime("%Y-%m-%d"))
-        data.columns = list(tbs.TABLE_CN_STOCK_CHIP_RACE_OPEN['columns'])
+
+        # Upstream returns Chinese headers; map to our schema.
+        data = _ensure_schema_columns(
+            data,
+            schema_columns=list(tbs.TABLE_CN_STOCK_CHIP_RACE_OPEN['columns']),
+            rename_map={
+                '代码': 'code',
+                '名称': 'name',
+                '最新价': 'new_price',
+                '涨跌幅': 'change_rate',
+                '昨收': 'pre_close_price',
+                '今开': 'open_price',
+                '开盘金额': 'deal_amount',
+                '抢筹幅度': 'bid_rate',
+                '抢筹委托金额': 'bid_trust_amount',
+                '抢筹成交金额': 'bid_deal_amount',
+                '抢筹占比': 'bid_ratio',
+            },
+        )
         return data
     except Exception as e:
         logging.error(f"stockfetch.fetch_stock_chip_race_open处理异常：{e}")
@@ -320,7 +385,24 @@ def fetch_stock_chip_race_end(date):
             data.insert(0, 'date', datetime.datetime.now().strftime("%Y-%m-%d"))
         else:
             data.insert(0, 'date', date.strftime("%Y-%m-%d"))
-        data.columns = list(tbs.TABLE_CN_STOCK_CHIP_RACE_END['columns'])
+
+        data = _ensure_schema_columns(
+            data,
+            schema_columns=list(tbs.TABLE_CN_STOCK_CHIP_RACE_END['columns']),
+            rename_map={
+                '代码': 'code',
+                '名称': 'name',
+                '最新价': 'new_price',
+                '涨跌幅': 'change_rate',
+                '昨收': 'pre_close_price',
+                '今开': 'open_price',
+                '收盘金额': 'deal_amount',
+                '抢筹幅度': 'bid_rate',
+                '抢筹委托金额': 'bid_trust_amount',
+                '抢筹成交金额': 'bid_deal_amount',
+                '抢筹占比': 'bid_ratio',
+            },
+        )
         return data
     except Exception as e:
         logging.error(f"stockfetch.fetch_stock_chip_race_end处理异常：{e}")
