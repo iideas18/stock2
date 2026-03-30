@@ -11,6 +11,7 @@ from functools import lru_cache
 import math
 import logging
 import pandas as pd
+import requests
 from instock.core.eastmoney_fetcher import eastmoney_fetcher
 
 def fetch_popular_stocks_sorted() -> pd.DataFrame:

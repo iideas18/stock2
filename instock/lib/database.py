@@ -5,6 +5,7 @@ import logging
 import os
 import pymysql
 import pandas as pd
+import time
 from sqlalchemy import create_engine
 from sqlalchemy.types import NVARCHAR
 from sqlalchemy import inspect
@@ -163,15 +164,37 @@ def insert_other_db_from_df(to_db, data, table_name, cols_type, write_index, pri
         # 插入到第一个位置：
         col_name_list.insert(0, data.index.name)
     try:
+        # Faster inserts: multi-row statements with chunking.
+        # Tunable because some MySQL instances have small max_allowed_packet.
+        chunksize = None
+        try:
+            chunksize_env = os.environ.get('INSTOCK_DB_INSERT_CHUNKSIZE', '').strip()
+            if chunksize_env:
+                chunksize = int(chunksize_env)
+        except Exception:
+            chunksize = None
+
+        method = os.environ.get('INSTOCK_DB_INSERT_METHOD', 'multi').strip() or 'multi'
+        t0 = time.perf_counter()
         if cols_type is None:
             data.to_sql(name=table_name, con=engine_mysql, schema=to_db, if_exists='append',
-                        index=write_index, )
+                        index=write_index, method=method, chunksize=chunksize)
         elif not cols_type:
             data.to_sql(name=table_name, con=engine_mysql, schema=to_db, if_exists='append',
-                        dtype={col_name: NVARCHAR(255) for col_name in col_name_list}, index=write_index, )
+                        dtype={col_name: NVARCHAR(255) for col_name in col_name_list}, index=write_index,
+                        method=method, chunksize=chunksize)
         else:
             data.to_sql(name=table_name, con=engine_mysql, schema=to_db, if_exists='append',
-                        dtype=cols_type, index=write_index, )
+                        dtype=cols_type, index=write_index, method=method, chunksize=chunksize)
+
+        logging.info(
+            "database.insert_other_db_from_df inserted table=%s rows=%s cost=%.3fs method=%s chunksize=%s",
+            table_name,
+            (len(data) if hasattr(data, '__len__') else 'unknown'),
+            time.perf_counter() - t0,
+            method,
+            chunksize,
+        )
     except Exception as e:
         logging.error(f"database.insert_other_db_from_df处理异常：{table_name}表{e}")
 

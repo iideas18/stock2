@@ -280,6 +280,66 @@ class stock_web_module_data(metaclass=singleton_type):
                 mode="link",
                 type="AI",
                 ico="fa fa-magic",
+                name="FindScope",
+                table_name="ai_findscope",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="https://gushitong.baidu.com/",
+                open_in_new_tab=True,
+            )
+        )
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="link",
+                type="AI",
+                ico="fa fa-magic",
+                name="东方财富",
+                table_name="ai_dfcf",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="https://www.eastmoney.com/",
+                open_in_new_tab=True,
+            )
+        )
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="link",
+                type="AI",
+                ico="fa fa-magic",
+                name="同花顺",
+                table_name="ai_tonghuashun",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="https://www.10jqka.com.cn/",
+                open_in_new_tab=True,
+            )
+        )
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="link",
+                type="AI",
+                ico="fa fa-magic",
+                name="财联社",
+                table_name="ai_cailianshe",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="https://www.cls.cn/",
+                open_in_new_tab=True,
+            )
+        )
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="link",
+                type="AI",
+                ico="fa fa-magic",
                 name="复盘盒子",
                 table_name="ai_fupanhezi",
                 columns=(),
