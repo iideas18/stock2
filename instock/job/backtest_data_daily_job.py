@@ -51,8 +51,7 @@ def process(table, data_all, date, backtest_column):
     now_date = datetime.datetime.now().date()
     sql = f"SELECT * FROM `{table_name}` WHERE `date` < '{now_date}' AND `{column_tail}` is NULL"
     try:
-        with mdb.get_connection() as conn:
-            data = pd.read_sql(sql=sql, con=conn)
+        data = mdb.read_sql(sql)
         if data is None or len(data.index) == 0:
             return
 

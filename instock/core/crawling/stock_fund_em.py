@@ -45,7 +45,7 @@ def stock_individual_fund_flow_rank(indicator: str = "5日") -> pd.DataFrame:
             "f12,f14,f2,f160,f174,f175,f176,f177,f178,f179,f180,f181,f182,f183,f260,f261,f124",
         ],
     }
-    url = "http://push2.eastmoney.com/api/qt/clist/get"
+    url = "https://push2.eastmoney.com/api/qt/clist/get"
     page_size = 50
     page_current = 1
     params = {
@@ -269,7 +269,7 @@ def stock_sector_fund_flow_rank(
             "f12,f14,f2,f160,f174,f175,f176,f177,f178,f179,f180,f181,f182,f183,f260,f261,f124",
         ],
     }
-    url = "http://push2.eastmoney.com/api/qt/clist/get"
+    url = "https://push2.eastmoney.com/api/qt/clist/get"
     page_size = 50
     page_current = 1
     params = {

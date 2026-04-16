@@ -7,6 +7,7 @@ import pymysql
 import pandas as pd
 import time
 from sqlalchemy import create_engine
+from sqlalchemy import text
 from sqlalchemy.types import NVARCHAR
 from sqlalchemy import inspect
 from sqlalchemy.sql.sqltypes import Float as SAFloat, Integer as SAInteger, Numeric as SANumeric, BigInteger as SABigInteger, SmallInteger as SASmallInteger
@@ -65,6 +66,16 @@ def get_connection():
         return pymysql.connect(**MYSQL_CONN_DBAPI)
     except Exception as e:
         logging.error(f"database.conn_not_cursor处理异常：{MYSQL_CONN_DBAPI}{e}")
+    return None
+
+
+def read_sql(sql, params=None):
+    try:
+        query = text(sql) if isinstance(sql, str) else sql
+        with engine().connect() as conn:
+            return pd.read_sql(sql=query, con=conn, params=params)
+    except Exception as e:
+        logging.error(f"database.read_sql处理异常：{e}")
     return None
 
 

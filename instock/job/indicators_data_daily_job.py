@@ -96,8 +96,7 @@ def guess_buy(date):
         sql = f'''SELECT `{_selcol}` FROM `{_table_name}` WHERE `date` = '{date}' and 
                 `kdjk` >= 80 and `kdjd` >= 70 and `kdjj` >= 100 and `rsi_6` >= 80 and 
                 `cci` >= 100 and `cr` >= 300 and `wr_6` >= -20 and `vr` >= 160'''
-        with mdb.get_connection() as conn:
-            data = pd.read_sql(sql=sql, con=conn)
+        data = mdb.read_sql(sql)
         data = data.drop_duplicates(subset="code", keep="last")
         # data.set_index('code', inplace=True)
 
@@ -132,8 +131,7 @@ def guess_sell(date):
         sql = f'''SELECT `{_selcol}` FROM `{_table_name}` WHERE `date` = '{date}' and 
                 `kdjk` < 20 and `kdjd` < 30 and `kdjj` < 10 and `rsi_6` < 20 and 
                 `cci` < -100 and `cr` < 40 and `wr_6` < -80 and `vr` < 40'''
-        with mdb.get_connection() as conn:
-            data = pd.read_sql(sql=sql, con=conn)
+        data = mdb.read_sql(sql)
         data = data.drop_duplicates(subset="code", keep="last")
         # data.set_index('code', inplace=True)
         if len(data.index) == 0:

@@ -4,6 +4,7 @@
 Date: 2022/6/19 15:26
 Desc: 东方财富网-行情首页-沪深京 A 股
 """
+#%%
 import random
 import time
 
@@ -575,7 +576,7 @@ def stock_zh_a_hist_pre_min_em(
     temp_df["时间"] = pd.to_datetime(temp_df["时间"]).astype(str)
     return temp_df
 
-
+#%%
 if __name__ == "__main__":
     stock_zh_a_spot_em_df = stock_zh_a_spot_em()
     print(stock_zh_a_spot_em_df)
