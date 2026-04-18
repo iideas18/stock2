@@ -16,6 +16,10 @@ import pandas as pd
 
 from instock.datasource.registry import get_source
 from instock.factors.storage import read_factor
+from instock.refdata import industry as refdata_industry
+from instock.refdata import listing as refdata_listing
+from instock.refdata import st as refdata_st
+from instock.refdata.schemas import RefdataNotAvailable
 
 from .combiner import EqualRankCombiner, FactorCombiner
 from .constraints import (
@@ -64,6 +68,30 @@ class StrategyConfig:
 class StrategyPipeline:
     """Executes one StrategyConfig over [start, end]."""
 
+    def _build_filter_context(
+        self, ohlcv: pd.DataFrame, at: date
+    ) -> FilterContext:
+        try:
+            listing_dates = refdata_listing.read_listing_dates()
+        except RefdataNotAvailable:
+            listing_dates = None
+        try:
+            st_flags = refdata_st.read_st_flags(at)
+        except RefdataNotAvailable:
+            st_flags = None
+        return FilterContext(
+            ohlcv_panel=ohlcv,
+            listing_dates=listing_dates,
+            st_flags=st_flags,
+        )
+
+    def _build_constraint_context(self, at: date) -> ConstraintContext:
+        try:
+            industry_map = refdata_industry.read_industry_map(at)
+        except RefdataNotAvailable:
+            industry_map = None
+        return ConstraintContext(industry_map=industry_map)
+
     def run(
         self, start: date, end: date, config: StrategyConfig
     ) -> pd.DataFrame:
@@ -85,7 +113,7 @@ class StrategyPipeline:
         resolver = config.universe_resolver or _default_universe_resolver()
 
         ohlcv = self._load_ohlcv_panel(start, end)
-        fctx = FilterContext(ohlcv_panel=ohlcv)
+        fctx = self._build_filter_context(ohlcv, start)
 
         rows = []
         for d in rebal:
@@ -113,7 +141,7 @@ class StrategyPipeline:
             )
             weights = config.weighter.weigh(selected, wctx)
 
-            cctx = ConstraintContext(industry_map=None)
+            cctx = self._build_constraint_context(d)
             for c in config.constraints:
                 weights = c.apply(weights, cctx)
 

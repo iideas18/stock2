@@ -103,3 +103,57 @@ def test_pipeline_empty_factor_data_returns_empty(monkeypatch):
     assert list(out.columns) == [
         "date", "code", "weight", "score", "strategy"
     ]
+
+
+def test_pipeline_injects_refdata_when_available(tmp_refdata_root):
+    """With listing_dates / st_flags / industry_map present in refdata,
+    StrategyPipeline must pass them into FilterContext / ConstraintContext."""
+    from datetime import date
+    import pandas as pd
+
+    from instock.refdata.listing import upsert_listing_dates
+    from instock.refdata.st import write_st_snapshot
+    from instock.refdata.industry import write_industry_snapshot
+    from instock.portfolio.pipeline import StrategyPipeline
+
+    upsert_listing_dates(pd.DataFrame({
+        "code": ["000001"], "listing_date": pd.to_datetime(["1991-04-03"]),
+    }))
+    write_st_snapshot(pd.DataFrame({
+        "code": ["000001"], "is_st": [False],
+        "snapshot_date": pd.to_datetime(["2026-04-01"]),
+    }))
+    write_industry_snapshot(pd.DataFrame({
+        "code": ["000001"], "industry": ["银行"],
+        "snapshot_date": pd.to_datetime(["2026-04-01"]),
+    }))
+
+    pipe = StrategyPipeline()
+    fctx = pipe._build_filter_context(
+        ohlcv=pd.DataFrame(columns=["date", "code", "volume"]),
+        at=date(2026, 4, 15),
+    )
+    cctx = pipe._build_constraint_context(at=date(2026, 4, 15))
+
+    assert fctx.listing_dates == {"000001": date(1991, 4, 3)}
+    assert fctx.st_flags == set()  # is_st=False -> empty set
+    assert cctx.industry_map == {"000001": "银行"}
+
+
+def test_pipeline_refdata_missing_returns_none(tmp_refdata_root):
+    """When refdata is empty, helpers must return None (not raise)."""
+    from datetime import date
+    import pandas as pd
+
+    from instock.portfolio.pipeline import StrategyPipeline
+
+    pipe = StrategyPipeline()
+    fctx = pipe._build_filter_context(
+        ohlcv=pd.DataFrame(columns=["date", "code", "volume"]),
+        at=date(2026, 4, 15),
+    )
+    cctx = pipe._build_constraint_context(at=date(2026, 4, 15))
+
+    assert fctx.listing_dates is None
+    assert fctx.st_flags is None
+    assert cctx.industry_map is None
