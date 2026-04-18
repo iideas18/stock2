@@ -49,19 +49,44 @@ class SuspendedFilter(UniverseFilter):
 
 
 class NewListingFilter(UniverseFilter):
-    """Drop codes whose earliest OHLCV date is < `min_days` before `at`."""
+    """Drop codes listed less than `min_days` calendar days before `at`.
+
+    Prefers FilterContext.listing_dates (authoritative). Falls back to
+    earliest-OHLCV-observation approximation when listing_dates is None,
+    warning once.
+    """
 
     def __init__(self, min_days: int = 60) -> None:
         self.min_days = min_days
+        self._warned_fallback = False
 
     def apply(self, codes, at, context):
         if not codes:
             return []
+        ts = pd.Timestamp(at)
+        if context.listing_dates is not None:
+            cutoff = ts - pd.Timedelta(days=self.min_days)
+            ok = []
+            for c in codes:
+                ld = context.listing_dates.get(c)
+                if ld is None:
+                    continue
+                if pd.Timestamp(ld) <= cutoff:
+                    ok.append(c)
+            return ok
+        # Fallback: earliest OHLCV observation.
+        if not self._warned_fallback:
+            import logging
+            logging.getLogger(__name__).warning(
+                "NewListingFilter: listing_dates missing; "
+                "falling back to earliest-OHLCV approximation"
+            )
+            self._warned_fallback = True
         panel = context.ohlcv_panel
         if panel.empty:
             return []
         first_seen = panel.groupby("code")["date"].min()
-        cutoff = at - pd.Timedelta(days=self.min_days)
+        cutoff = ts - pd.Timedelta(days=self.min_days)
         ok = set(first_seen[first_seen <= cutoff].index.astype(str))
         return [c for c in codes if c in ok]
 

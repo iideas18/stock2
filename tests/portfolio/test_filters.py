@@ -189,3 +189,48 @@ def test_limitfilter_filters_when_t_minus_1_missing():
         ["000001"], pd.Timestamp("2026-04-01"), ctx
     )
     assert out == []
+
+
+from datetime import date as _date
+from instock.portfolio.filters import NewListingFilter as _NewListingFilter
+
+
+def test_newlisting_uses_listing_dates_when_provided():
+    panel = pd.DataFrame(
+        columns=["date", "code", "open", "high", "low", "close", "volume"]
+    )
+    ctx = FilterContext(
+        ohlcv_panel=panel,
+        listing_dates={
+            "000001": _date(2020, 1, 1),
+            "600000": _date(2026, 4, 1),  # too new
+        },
+    )
+    out = _NewListingFilter(min_days=60).apply(
+        ["000001", "600000"], pd.Timestamp("2026-04-10"), ctx
+    )
+    assert out == ["000001"]
+
+
+def test_newlisting_falls_back_to_ohlcv_when_listing_dates_none(caplog):
+    panel = pd.DataFrame({
+        "date": pd.to_datetime(
+            ["2020-01-01", "2026-03-01", "2026-04-10"]
+        ),
+        "code": ["000001", "600000", "600000"],
+        "open":   [10.0, 10.0, 10.0],
+        "high":   [10.0, 10.0, 10.0],
+        "low":    [10.0, 10.0, 10.0],
+        "close":  [10.0, 10.0, 10.0],
+        "volume": [1000.0, 1000.0, 1000.0],
+    })
+    ctx = FilterContext(ohlcv_panel=panel, listing_dates=None)
+    with caplog.at_level(logging.WARNING):
+        out = _NewListingFilter(min_days=60).apply(
+            ["000001", "600000"], pd.Timestamp("2026-04-10"), ctx
+        )
+    assert out == ["000001"]
+    assert any(
+        "fallback" in r.message.lower() or "ohlcv" in r.message.lower()
+        for r in caplog.records
+    )
