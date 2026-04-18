@@ -1,7 +1,7 @@
 """pandera schema contracts for IDataSource method returns."""
 from __future__ import annotations
 
-import pandera as pa
+import pandera.pandas as pa
 
 
 OHLCV_SCHEMA = pa.DataFrameSchema(
