@@ -112,3 +112,80 @@ def test_stfilter_warns_only_once(caplog):
         r for r in caplog.records if "st_flags" in r.message.lower()
     ]
     assert len(st_warnings) == 1
+
+
+from instock.portfolio.filters import LimitFilter, default_thresholds
+
+
+def test_thresholds_by_board():
+    assert default_thresholds("000001", False) == 0.10
+    assert default_thresholds("600000", False) == 0.10
+    assert default_thresholds("300001", False) == 0.20
+    assert default_thresholds("688001", False) == 0.20
+    assert default_thresholds("830001", False) == 0.30
+    assert default_thresholds("430001", False) == 0.30
+    assert default_thresholds("000001", True) == 0.05  # ST override
+
+
+def test_limitfilter_drops_limit_up_on_prior_day():
+    panel = pd.DataFrame({
+        "date": pd.to_datetime(
+            ["2026-03-30", "2026-03-31", "2026-04-01"]
+        ),
+        "code": ["000001"] * 3,
+        "open":   [10.0, 10.5, 11.1],
+        "high":   [10.0, 11.0, 11.2],
+        "low":    [9.8, 10.3, 10.9],
+        "close":  [10.0, 11.0, 11.1],
+        "volume": [1000.0, 1000.0, 1000.0],
+    })
+    ctx = FilterContext(ohlcv_panel=panel, st_flags=set())
+    out = LimitFilter().apply(
+        ["000001"], pd.Timestamp("2026-04-01"), ctx
+    )
+    assert out == []
+
+
+def test_limitfilter_keeps_non_limit():
+    panel = pd.DataFrame({
+        "date": pd.to_datetime(["2026-03-30", "2026-03-31"]),
+        "code": ["000001"] * 2,
+        "open":   [10.0, 10.2],
+        "high":   [10.1, 10.5],
+        "low":    [9.9, 10.1],
+        "close":  [10.0, 10.3],
+        "volume": [1000.0, 1000.0],
+    })
+    ctx = FilterContext(ohlcv_panel=panel, st_flags=set())
+    out = LimitFilter().apply(
+        ["000001"], pd.Timestamp("2026-04-01"), ctx
+    )
+    assert out == ["000001"]
+
+
+def test_limitfilter_uses_st_threshold():
+    panel = pd.DataFrame({
+        "date": pd.to_datetime(["2026-03-30", "2026-03-31"]),
+        "code": ["000001"] * 2,
+        "open":   [10.0, 10.4],
+        "high":   [10.0, 10.5],
+        "low":    [9.8, 10.3],
+        "close":  [10.0, 10.5],
+        "volume": [1000.0, 1000.0],
+    })
+    ctx = FilterContext(ohlcv_panel=panel, st_flags={"000001"})
+    out = LimitFilter().apply(
+        ["000001"], pd.Timestamp("2026-04-01"), ctx
+    )
+    assert out == []
+
+
+def test_limitfilter_filters_when_t_minus_1_missing():
+    panel = pd.DataFrame(
+        columns=["date", "code", "open", "high", "low", "close", "volume"]
+    )
+    ctx = FilterContext(ohlcv_panel=panel, st_flags=set())
+    out = LimitFilter().apply(
+        ["000001"], pd.Timestamp("2026-04-01"), ctx
+    )
+    assert out == []

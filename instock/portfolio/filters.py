@@ -7,6 +7,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import date
+from typing import Callable
 
 import pandas as pd
 
@@ -100,3 +101,65 @@ class STFilter(UniverseFilter):
             return list(codes)
         flags = context.st_flags
         return [c for c in codes if c not in flags]
+
+
+def default_thresholds(code: str, is_st: bool) -> float:
+    """A-share limit-up/down thresholds by board prefix.
+
+    - ST: 5%
+    - 创业板 300xxx: 20%
+    - 科创板 688xxx: 20%
+    - 北交所 4/8 开头: 30%
+    - 主板其余: 10%
+    """
+    if is_st:
+        return 0.05
+    if code.startswith("300") or code.startswith("688"):
+        return 0.20
+    if code.startswith("4") or code.startswith("8"):
+        return 0.30
+    return 0.10
+
+
+class LimitFilter(UniverseFilter):
+    """Drop codes that hit limit-up on the trading day before `at`.
+
+    Logic: find the T-1 and T-2 rows for each code in ohlcv_panel; if
+      (close_T-1 / close_T-2) - 1 >= threshold - tolerance, drop the code.
+    Missing prior data -> conservative drop.
+    """
+
+    def __init__(
+        self,
+        threshold_provider: Callable[[str, bool], float] = default_thresholds,
+        tolerance: float = 1e-3,
+    ) -> None:
+        self.threshold_provider = threshold_provider
+        self.tolerance = tolerance
+
+    def apply(self, codes, at, context):
+        if not codes:
+            return []
+        panel = context.ohlcv_panel
+        if panel.empty:
+            return []
+        ts = pd.Timestamp(at)
+        prior = panel[panel["date"] < ts]
+        if prior.empty:
+            return []
+        st_flags = context.st_flags or set()
+        out = []
+        for c in codes:
+            rows = prior[prior["code"] == c].sort_values("date")
+            if len(rows) < 2:
+                continue  # conservative drop
+            close_t1 = rows.iloc[-1]["close"]
+            close_t2 = rows.iloc[-2]["close"]
+            if close_t2 <= 0:
+                continue
+            ret = close_t1 / close_t2 - 1.0
+            thr = self.threshold_provider(c, c in st_flags)
+            if ret >= thr - self.tolerance:
+                continue  # limit-up -> drop
+            out.append(c)
+        return out
