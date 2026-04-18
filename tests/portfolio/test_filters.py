@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 import pytest
 
@@ -5,6 +6,7 @@ from instock.portfolio.filters import (
     FilterChain,
     FilterContext,
     NewListingFilter,
+    STFilter,
     SuspendedFilter,
 )
 
@@ -71,3 +73,42 @@ def test_filter_chain_short_circuits_on_empty():
         ["600519"], pd.Timestamp("2024-01-02"), ctx
     )
     assert out == []
+
+
+def _empty_ohlcv():
+    return pd.DataFrame(
+        columns=["date", "code", "open", "high", "low", "close", "volume"]
+    )
+
+
+def test_stfilter_drops_st_codes():
+    ctx = FilterContext(
+        ohlcv_panel=_empty_ohlcv(),
+        st_flags={"000001"},
+    )
+    out = STFilter().apply(
+        ["000001", "600000"], pd.Timestamp("2026-04-01"), ctx
+    )
+    assert out == ["600000"]
+
+
+def test_stfilter_noop_when_flags_missing(caplog):
+    ctx = FilterContext(ohlcv_panel=_empty_ohlcv(), st_flags=None)
+    with caplog.at_level(logging.WARNING):
+        out = STFilter().apply(
+            ["000001"], pd.Timestamp("2026-04-01"), ctx
+        )
+    assert out == ["000001"]
+    assert any("st_flags" in rec.message.lower() for rec in caplog.records)
+
+
+def test_stfilter_warns_only_once(caplog):
+    flt = STFilter()
+    ctx = FilterContext(ohlcv_panel=_empty_ohlcv(), st_flags=None)
+    with caplog.at_level(logging.WARNING):
+        flt.apply(["000001"], pd.Timestamp("2026-04-01"), ctx)
+        flt.apply(["000002"], pd.Timestamp("2026-04-02"), ctx)
+    st_warnings = [
+        r for r in caplog.records if "st_flags" in r.message.lower()
+    ]
+    assert len(st_warnings) == 1

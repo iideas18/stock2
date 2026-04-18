@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import date
 
 import pandas as pd
 
@@ -13,8 +14,14 @@ import pandas as pd
 @dataclass
 class FilterContext:
     """Shared data passed to every filter. OHLCV must span back far enough
-    for history-based filters (e.g. NewListingFilter.min_days)."""
+    for history-based filters (e.g. NewListingFilter.min_days).
+
+    listing_dates and st_flags are Sub-2.5 additions; filters must tolerate
+    None and fall back gracefully with a single warning.
+    """
     ohlcv_panel: pd.DataFrame
+    listing_dates: dict[str, date] | None = None
+    st_flags: set[str] | None = None
 
 
 class UniverseFilter(ABC):
@@ -71,3 +78,25 @@ class FilterChain:
             if not out:
                 return []
         return out
+
+
+class STFilter(UniverseFilter):
+    """Drop codes flagged as ST in FilterContext.st_flags.
+
+    If st_flags is None: warn once and no-op (keeps all codes).
+    """
+
+    def __init__(self) -> None:
+        self._warned = False
+
+    def apply(self, codes, at, context):
+        if context.st_flags is None:
+            if not self._warned:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "STFilter: context.st_flags is None; no-op"
+                )
+                self._warned = True
+            return list(codes)
+        flags = context.st_flags
+        return [c for c in codes if c not in flags]
