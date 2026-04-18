@@ -30,6 +30,8 @@ def _resolve_universe(at: date | None = None) -> list[str]:
 
 def run(start: date, end: date) -> dict[str, Exception]:
     """Run every registered factor for [start, end]; return per-factor errors."""
+    from instock.factors.bootstrap import register_default_factors
+    register_default_factors()
     errors: dict[str, Exception] = {}
     # Use end-of-window membership to avoid backfill look-ahead.
     universe = _resolve_universe(end)
