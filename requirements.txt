@@ -16,3 +16,10 @@ easytrader==0.23.7
 beautifulsoup4==4.14.3
 pycryptodome==3.23.0
 python_dateutil==2.9.0.post0
+pandera==0.31.1
+pyarrow==17.0.0
+Jinja2==3.1.4
+matplotlib==3.9.2
+pytest==8.3.3
+pytest-mock==3.14.0
+akshare==1.16.72
