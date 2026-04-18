@@ -105,6 +105,37 @@
 
 ---
 
+### Sub-project 2.5 ✅ 数据层对齐（已合并到 master，tag `subproject-2.5-data-alignment-mvp`）
+
+**实际交付**（MVP）：
+- `instock/refdata/` 包：industry / listing / st / ohlcv_store + schemas
+  - `read_industry_map(at)`、`read_st_flags(at)`：as-of 查询最近快照
+  - `read_listing_dates()` / `upsert_listing_dates`
+  - `OhlcvPanelStore`：本地 Parquet 缓存 + 缺失时 IDataSource 在线补齐；
+    按 trade_calendar 判缺失（不按 date.range）
+- `instock/factors/bootstrap.py::register_default_factors()`：修 Sub-1 follow-up A
+  silent-no-op bug；Sub-1 / Sub-2 daily job 共用
+- `instock/portfolio/filters.py`：新增 `STFilter` + `LimitFilter`（按板块差化阈值
+  10/20/30%、ST 5%）；`NewListingFilter` 改为优先用 `listing_dates`，缺失时回退
+- `instock/portfolio/pipeline.py`：自动注入 refdata 到 `FilterContext` /
+  `ConstraintContext`；缺 refdata 时各 filter/constraint 回退 + warn 一次
+- 三个 refdata daily job：industry（推荐周）/ listing（推荐月）/ ST（推荐周）
+- akshare fetcher：`board_industry_name_em` / `board_industry_cons_em` /
+  `individual_info_em` / `zh_a_st_em`
+
+**测试**：122 passed, 5 skipped（4 个 INSTOCK_SUB25_SMOKE smoke + Sub-2 旧 smoke）。
+无 FutureWarning 新增。
+
+**MVP 验收已达成**：
+- refdata reader 从空态到有态的全链路单测
+- `OhlcvPanelStore` cache-hit / cache-miss / trade_calendar-gap / 单 code 失败跳过单测
+- Sub-2 `FilterContext` 扩展 + 真 industry_map 注入路径单测
+- `INSTOCK_SUB25_SMOKE=1` 真数据冒烟 4 例
+
+**follow-up**: `docs/superpowers/followups/subproject-2.5-data-alignment.md`
+
+---
+
 ### Sub-project 3 ⏳ 回测与交易模拟引擎
 **定位**: 在 Sub-2 产出的持仓清单上做严格的历史回测，这是 alpha 研究可信度的决定性环节。
 
@@ -209,6 +240,7 @@ Sub-1 (数据与因子) ─┬─> Sub-2 (选股组合) ─┬─> Sub-3 (回测
 |-------|------|---------|------|---------------|
 | 1 | 数据与因子工程 | 能造因子、能存、能评估 | ✅ 已合并 | 17（实际） |
 | 2 | 选股与组合构建 | 因子 → 可下单权重 | ✅ 已合并 | 13（实际） |
+| 2.5 | 数据层对齐 | refdata + OhlcvPanelStore + factor bootstrap | ✅ 已合并 | 14（实际） |
 | 3 | 回测与交易模拟 | 策略历史可验证 | 🎯 下一步 | ~12–15 |
 | 4 | Web 交互 & 监控 | 研究员日常入口 | ⏳ | ~15–20 |
 
