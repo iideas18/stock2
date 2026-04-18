@@ -30,7 +30,7 @@ class _StubFactor(Factor):
 def test_job_writes_each_factor(tmp_factor_root, monkeypatch):
     clear_registry()
     register(_StubFactor())
-    monkeypatch.setattr(job, "_resolve_universe", lambda: ["600519"])
+    monkeypatch.setattr(job, "_resolve_universe", lambda *a, **kw: ["600519"])
     job.run(date(2024, 1, 2), date(2024, 1, 2))
     out = storage.read_factor(
         "stub",

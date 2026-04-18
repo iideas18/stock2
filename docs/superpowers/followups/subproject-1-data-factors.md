@@ -8,8 +8,8 @@ Verdict was **Approved with minor issues** — all items below are non-blocking 
 
 ## A. Docstring / naming cleanups (cheap, any time)
 
-- [ ] `instock/factors/flow/north.py` — `NorthHoldingChgFactor.description` currently says "Pct change of northbound hold_shares over ~{window} calendar days" but implementation uses `shift(1)` (last observed snapshot). Update description to reflect "pct change vs. previous observed snapshot" to avoid misleading N-day semantics.
-- [ ] `instock/factors/evaluator.py::evaluate_from_frames` — docstring must state the date-alignment contract: caller is responsible for indexing `returns_df` by the factor-available date (typically `ret[T]` = realized return over `T → T+1`). Evaluator does not shift.
+- [x] `instock/factors/flow/north.py` — `NorthHoldingChgFactor.description` currently says "Pct change of northbound hold_shares over ~{window} calendar days" but implementation uses `shift(1)` (last observed snapshot). Update description to reflect "pct change vs. previous observed snapshot" to avoid misleading N-day semantics.
+- [x] `instock/factors/evaluator.py::evaluate_from_frames` — docstring must state the date-alignment contract: caller is responsible for indexing `returns_df` by the factor-available date (typically `ret[T]` = realized return over `T → T+1`). Evaluator does not shift.
 - [ ] `instock/datasource/io.py::RateLimiter` — docstring note "not thread-safe; one instance per thread" (internal `self._last` read/write is unlocked).
 - [ ] Dead imports:
   - `instock/factors/evaluator.py:3` — `field` from dataclasses unused.
@@ -21,14 +21,14 @@ Verdict was **Approved with minor issues** — all items below are non-blocking 
 The original plan listed deliberate exclusions; these were found during review and should be appended:
 
 - [ ] **Evaluator decay curve is a stub.** `evaluator.py:56` returns `ic_mean` for lag=1 and `NaN` for all other lags. Real decay (compute IC at lag-N shifted returns) deferred. Test only asserts attribute existence.
-- [ ] **Daily job uses today's index membership for historical backfill.** `factor_compute_daily_job.py:_resolve_universe` calls `get_index_member("000300", date.today())` regardless of the compute window → survivorship / membership look-ahead when backfilling. Acceptable for forward daily runs; must be fixed (use `end` date, or membership-as-of per date) before any serious historical research.
+- [ ] **Daily job uses today's index membership for historical backfill.** ~~`factor_compute_daily_job.py:_resolve_universe` calls `get_index_member("000300", date.today())` regardless of the compute window → survivorship / membership look-ahead when backfilling.~~ **RESOLVED**: `_resolve_universe(at)` now accepts an explicit as-of date; `run(start, end)` passes `end` as the anchor so backfill uses end-of-window membership. Still a simplification (true point-in-time would use membership per each date in the window), but removes the today-anchored look-ahead.
 - [ ] **PIT valuation is O(D×N) Python loop.** `fundamental/valuation.py` iterates each day × each latest-row. For CSI-300 × multi-year this will be slow. Replace with single `pd.merge_asof(by="code", on="date", left=dates_df, right=pit_df.sort_values("announcement_date"))` style join.
 
 ## C. Missing tests (ship with sub-project 2 or as a follow-up PR)
 
 - [ ] `instock/datasource/tushare_source.py` — one test asserting all 7 methods raise `NotImplementedError("TushareSource not enabled")`. Guards against accidental implementation drift.
 - [ ] `AkShareSource` untested methods — `get_north_bound`, `get_money_flow`, `get_index_member` have no unit tests (only `get_ohlcv`, `get_fundamentals_pit`, `get_lhb`, `get_trade_calendar` have fixtures). Add fixture-driven smoke tests with mocked akshare calls.
-- [ ] **Retry ↔ SchemaValidationError regression test.** The design deliberately splits `_fetch_*` (retry-decorated) from public method (validate-only). Add a test that patches `_fetch_ohlcv` to return a bad-schema frame and asserts:
+- [x] **Retry ↔ SchemaValidationError regression test.** The design deliberately splits `_fetch_*` (retry-decorated) from public method (validate-only). Add a test that patches `_fetch_ohlcv` to return a bad-schema frame and asserts:
   1. `SchemaValidationError` is raised (not `DataSourceError`)
   2. `_fetch_ohlcv` was called exactly once (not retried)
 - [ ] `factor_compute_daily_job.run()` error path — register two factors, make one raise, assert the other still writes and `errors` dict contains only the failing one.
