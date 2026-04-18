@@ -23,7 +23,21 @@ def evaluate_from_frames(
     n_groups: int = 10,
     decay_lags: tuple[int, ...] = (1, 5, 10, 20),
 ) -> FactorReport:
-    """Pure-compute evaluator: takes factor values and next-period returns."""
+    """Pure-compute evaluator: takes factor values and next-period returns.
+
+    Date-alignment contract (CALLER'S RESPONSIBILITY):
+        The evaluator performs an inner-join on ``(date, code)`` and does NOT
+        shift either side. The caller MUST align ``returns_df`` so that the
+        ``ret`` value on date T is the return the factor signal on date T is
+        trying to predict.
+
+        Typical convention: if ``factor_df[T, code] = signal`` is known at
+        close of day T (or morning of T+1), then
+        ``returns_df[T, code] = close(T+1) / close(T) - 1``.
+
+        Mis-aligned inputs (e.g. putting realized return on day T+1 instead
+        of T) will silently produce near-zero IC due to empty inner-join.
+    """
     merged = factor_df.merge(returns_df, on=["date", "code"], how="inner")
     merged = merged.dropna(subset=["value", "ret"])
 

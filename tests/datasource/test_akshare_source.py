@@ -45,6 +45,29 @@ def test_get_ohlcv_schema_violation_raises(mocker):
         src.get_ohlcv("600519", date(2024, 1, 1), date(2024, 1, 5))
 
 
+def test_schema_violation_is_not_retried(mocker):
+    """SchemaValidationError must bypass the retry decorator.
+
+    Design invariant: `_fetch_*` is retry-decorated (for network flakes);
+    validation happens in the public method, AFTER the retry boundary.
+    A schema failure therefore must surface immediately without extra
+    underlying fetches.
+    """
+    bad = _ak_ohlcv_fixture()
+    bad.loc[0, "收盘"] = 0.0  # violates gt=0
+    spy = mocker.patch(
+        "instock.datasource.akshare_source.ak.stock_zh_a_hist",
+        return_value=bad,
+    )
+    src = AkShareSource()
+    with pytest.raises(SchemaValidationError):
+        src.get_ohlcv("600519", date(2024, 1, 1), date(2024, 1, 5))
+    assert spy.call_count == 1, (
+        f"SchemaValidationError should not be retried, but underlying "
+        f"akshare call fired {spy.call_count} times"
+    )
+
+
 def _ak_fin_indicator_fixture():
     return pd.DataFrame({
         "报告期":       ["20230930", "20230630"],

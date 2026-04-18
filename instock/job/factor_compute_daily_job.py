@@ -15,16 +15,24 @@ from instock.factors.registry import get_all
 log = logging.getLogger(__name__)
 
 
-def _resolve_universe() -> list[str]:
-    """Default universe: CSI 300. Extended later."""
+def _resolve_universe(at: date | None = None) -> list[str]:
+    """Default universe: CSI 300 membership as of `at` (default today).
+
+    Passing the compute-window's `end` date (instead of today) is critical
+    for historical backfill: using today's membership for a 2020 compute
+    window would leak survivorship / membership look-ahead.
+    """
     from instock.datasource.registry import get_source
-    return get_source().get_index_member("000300", date.today())
+    if at is None:
+        at = date.today()
+    return get_source().get_index_member("000300", at)
 
 
 def run(start: date, end: date) -> dict[str, Exception]:
     """Run every registered factor for [start, end]; return per-factor errors."""
     errors: dict[str, Exception] = {}
-    universe = _resolve_universe()
+    # Use end-of-window membership to avoid backfill look-ahead.
+    universe = _resolve_universe(end)
     for name, factor in get_all().items():
         try:
             raw = factor.compute(universe, start, end)

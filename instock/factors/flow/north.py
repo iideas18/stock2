@@ -19,8 +19,13 @@ class NorthHoldingChgFactor(Factor):
     def __init__(self, window: int = 5) -> None:
         self.window = window
         self.name = f"north_holding_chg_{window}d"
+        # Semantics: pct change vs. the last previously observed snapshot per
+        # code (shift(1) per-code), NOT a fixed N-day positional change.
+        # Northbound data is sampled sparsely; `window` only controls the
+        # fetch-lookback buffer so the earliest in-range day has a prior snapshot.
         self.description = (
-            f"Pct change of northbound hold_shares over ~{window} calendar days"
+            "Pct change of northbound hold_shares vs. previous observed "
+            f"snapshot (fetch lookback ~{window} days)"
         )
 
     def compute(
