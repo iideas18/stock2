@@ -47,25 +47,10 @@ def _parse(argv: list[str]) -> tuple[date, date]:
 
 def _default_configs() -> list[StrategyConfig]:
     """MVP: a single default strategy using every factor currently registered."""
-    from instock.factors.technical.momentum import MomentumFactor
-    from instock.factors.fundamental.valuation import PEFactor, PBFactor, ROEFactor
-    from instock.factors.lhb.heat import LhbHeatFactor
-    from instock.factors.flow.north import NorthHoldingChgFactor
-    from instock.factors.registry import register, get_all
+    from instock.factors.bootstrap import register_default_factors
+    from instock.factors.registry import get_all
 
-    for factor_cls in (
-        MomentumFactor,
-        PEFactor,
-        PBFactor,
-        ROEFactor,
-        LhbHeatFactor,
-        NorthHoldingChgFactor,
-    ):
-        try:
-            register(factor_cls())
-        except ValueError:
-            pass  # already registered
-
+    register_default_factors()
     names = list(get_all().keys())
     return [StrategyConfig(name="default", factors=names)]
 
