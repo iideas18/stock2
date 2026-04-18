@@ -17,3 +17,21 @@ def tmp_holding_root(tmp_path, monkeypatch):
     root.mkdir()
     monkeypatch.setenv("INSTOCK_HOLDING_ROOT", str(root))
     return root
+
+
+@pytest.fixture
+def tmp_refdata_root(tmp_path, monkeypatch):
+    """Point the refdata Parquet root at a per-test tmp dir."""
+    root = tmp_path / "refdata"
+    root.mkdir()
+    monkeypatch.setenv("INSTOCK_REFDATA_ROOT", str(root))
+    return root
+
+
+@pytest.fixture
+def tmp_ohlcv_root(tmp_path, monkeypatch):
+    """Point the OHLCV Parquet cache root at a per-test tmp dir."""
+    root = tmp_path / "ohlcv"
+    root.mkdir()
+    monkeypatch.setenv("INSTOCK_OHLCV_ROOT", str(root))
+    return root
