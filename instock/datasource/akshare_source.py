@@ -215,6 +215,29 @@ class AkShareSource(IDataSource):
         self._limiter.wait()
         return ak.tool_trade_date_hist_sina()
 
+    # ---------- Board industry ----------
+    @with_retry(max_attempts=3, base_delay=0.5)
+    def _fetch_board_industry_names(self) -> pd.DataFrame:
+        self._limiter.wait()
+        return ak.stock_board_industry_name_em()
+
+    @with_retry(max_attempts=3, base_delay=0.5)
+    def _fetch_board_industry_cons(self, board: str) -> pd.DataFrame:
+        self._limiter.wait()
+        return ak.stock_board_industry_cons_em(symbol=board)
+
+    # ---------- Individual info (listing date) ----------
+    @with_retry(max_attempts=3, base_delay=0.5)
+    def _fetch_individual_info(self, code: str) -> pd.DataFrame:
+        self._limiter.wait()
+        return ak.stock_individual_info_em(symbol=code)
+
+    # ---------- ST snapshot ----------
+    @with_retry(max_attempts=3, base_delay=0.5)
+    def _fetch_st_snapshot(self) -> pd.DataFrame:
+        self._limiter.wait()
+        return ak.stock_zh_a_st_em()
+
 
 def _empty_like(schema: Any) -> pd.DataFrame:
     cols = list(schema.columns.keys())
