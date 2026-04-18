@@ -40,7 +40,37 @@
 
 ## 规划中
 
-### Sub-project 2 🎯 选股与组合构建（下一步）
+### Sub-project 2 ✅ 选股与组合构建（已合并到 master，tag `subproject-2-portfolio-construction-mvp`）
+
+**实际交付**（MVP）：
+- `instock/portfolio/` 包：schema + storage + 6 个组件 ABC + 默认实现
+  - `HoldingSchedule` pandera schema（`weight∈[0,1]`、6 位 code、score nullable）
+    + `validate_holding_invariants` 强制 (date,strategy) 内 weight.sum()=1±1e-6 + code 唯一
+  - Parquet 按年分区存储（`<INSTOCK_HOLDING_ROOT>/<strategy>/<year>.parquet`）
+  - `EqualRankCombiner`（per-date `rank(pct=True, method="average")` 后均值）
+  - `SuspendedFilter`（volume==0 / 缺行）+ `NewListingFilter(min_days)`（首见日历日近似）+ `FilterChain`
+  - `TopQuantileSelector(quantile)`（`max(1, round(n*q))` 下限）+ `TopNSelector(n)`
+  - `EqualWeighter` + `WeighterContext(price_panel, mcap_panel, scores)`
+  - `MaxWeightConstraint`（迭代 clip+按比例再分配，`n*cap<1` 抛错）
+    + `IndustryExposureConstraint`（None map 时 no-op；否则按行业缩放再分配）
+  - `DailyRebalance` + `WeeklyRebalance(weekday)`（节假日回退：取目标日往前同周内最后一个交易日）
+  - `StrategyConfig` + `StrategyPipeline`：combine → filter → select → weigh → constrain → 行
+- 日频生成作业 `instock/job/generate_holdings_daily_job.py` + CLI + `_default_configs()`
+- 真实数据冒烟测试（`INSTOCK_SUB2_SMOKE=1` 才跑）
+
+**测试**: 83 passed + 1 skipped（real-data smoke）。无 FutureWarning 新增。
+
+**MVP 验收已达成**：
+- 单/多因子 → `HoldingSchedule` pipeline 跑通（`tests/portfolio/test_pipeline.py`）
+- 行业中性约束（None map 时正确 no-op + warn 一次）+ 单票上限均有单测
+- weight.sum()=1±1e-6 由 schema invariant 强制
+
+**follow-up**: `docs/superpowers/followups/subproject-2-portfolio-construction.md`
+（含一项跨切关键问题：Sub-1 factor registry 实际为空的潜伏 bug，详见 follow-up A 区）
+
+---
+
+### ~~Sub-project 2 🎯 选股与组合构建（下一步）~~  <!-- 旧文案保留以下作为历史记录 -->
 **定位**: 把原始因子变成可下单的持仓权重。是 alpha 研究的主干，也是整套平台价值链最长的一段。
 
 **核心交付**：
@@ -178,8 +208,8 @@ Sub-1 (数据与因子) ─┬─> Sub-2 (选股组合) ─┬─> Sub-3 (回测
 | 子项目 | 主题 | 核心价值 | 状态 | 预估 task 数* |
 |-------|------|---------|------|---------------|
 | 1 | 数据与因子工程 | 能造因子、能存、能评估 | ✅ 已合并 | 17（实际） |
-| 2 | 选股与组合构建 | 因子 → 可下单权重 | ⏳ 下一步 | ~15–20 |
-| 3 | 回测与交易模拟 | 策略历史可验证 | ⏳ | ~12–15 |
+| 2 | 选股与组合构建 | 因子 → 可下单权重 | ✅ 已合并 | 13（实际） |
+| 3 | 回测与交易模拟 | 策略历史可验证 | 🎯 下一步 | ~12–15 |
 | 4 | Web 交互 & 监控 | 研究员日常入口 | ⏳ | ~15–20 |
 
 *实际 task 数以各子项目单独 plan 为准。
