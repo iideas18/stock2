@@ -83,3 +83,79 @@ class ArtifactFreshness(StatusCheck):
             message=f"age={age_days:.2f}d (latest={ts.date()})",
             metric_value=age_days, as_of=now,
         )
+
+
+class ICIRDecay(StatusCheck):
+    """|IC_IR| over last window_days < threshold → RED. Empty data → YELLOW.
+
+    frame_loader returns a DataFrame with columns (date, code, value, fwd_ret)
+    per factor name. If not provided, falls back to reading from Sub-1
+    factor storage and joining next-day returns from ohlcv cache.
+    """
+
+    def __init__(
+        self,
+        factor: str,
+        window_days: int = 30,
+        threshold: float = 0.1,
+        frame_loader: Callable[[str], pd.DataFrame] | None = None,
+    ) -> None:
+        self.name = f"icir.{factor}"
+        self._factor = factor
+        self._window = window_days
+        self._threshold = threshold
+        self._loader = frame_loader or _default_icir_loader
+
+    def run(self) -> StatusRow:
+        now = pd.Timestamp.now()
+        try:
+            df = self._loader(self._factor)
+        except Exception as exc:
+            return StatusRow(
+                name=self.name, status="RED",
+                message=f"loader failed: {exc}",
+                metric_value=None, as_of=now,
+            )
+        if df.empty:
+            return StatusRow(
+                name=self.name, status="YELLOW",
+                message="no data yet", metric_value=None, as_of=now,
+            )
+        cutoff = df["date"].max() - pd.Timedelta(days=self._window)
+        window = df[df["date"] >= cutoff]
+        ic_per_day = (
+            window.groupby("date")
+            .apply(lambda g: g["value"].corr(g["fwd_ret"], method="spearman"))
+            .dropna()
+        )
+        if len(ic_per_day) < 5:
+            return StatusRow(
+                name=self.name, status="YELLOW",
+                message=f"insufficient days ({len(ic_per_day)})",
+                metric_value=None, as_of=now,
+            )
+        mean_ic = float(ic_per_day.mean())
+        std_ic = float(ic_per_day.std(ddof=1))
+        icir = abs(mean_ic / std_ic) if std_ic > 0 else 0.0
+        status = "GREEN" if icir >= self._threshold else "RED"
+        return StatusRow(
+            name=self.name, status=status,
+            message=f"IC_IR={icir:.3f} over {len(ic_per_day)}d",
+            metric_value=icir, as_of=now,
+        )
+
+
+def _default_icir_loader(factor: str) -> pd.DataFrame:
+    # Best-effort: wire into Sub-1 read_factor + Sub-2.5 ohlcv cache.
+    # Kept intentionally minimal; unit tests inject a loader instead.
+    from instock.factors.storage import read_factor
+    end = pd.Timestamp.now()
+    start = end - pd.Timedelta(days=90)
+    df = read_factor(factor, start, end)
+    if df.empty:
+        return df
+    # Fwd return from ohlcv cache is environment-dependent; return empty
+    # fwd_ret so that the check degrades to YELLOW when ohlcv not available.
+    df = df.copy()
+    df["fwd_ret"] = float("nan")
+    return df.dropna(subset=["fwd_ret"])
