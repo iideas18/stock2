@@ -54,9 +54,10 @@ class StrategyDetailHandler(tornado.web.RequestHandler):
             latest_rows = latest[
                 ["code", "weight", "score"]
             ].sort_values("weight", ascending=False).to_dict("records")
-            prev_dates = df[df["date"] < latest_date]["date"]
-            if not prev_dates.empty:
-                prev_date = prev_dates.max()
+            anchor = latest_date - pd.Timedelta(days=7)
+            prev_candidates = df[df["date"] <= anchor]["date"]
+            if not prev_candidates.empty:
+                prev_date = prev_candidates.max()
                 prev = df[df["date"] == prev_date]
                 added = sorted(set(latest["code"]) - set(prev["code"]))
                 removed = sorted(set(prev["code"]) - set(latest["code"]))
