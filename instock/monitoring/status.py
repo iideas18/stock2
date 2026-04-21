@@ -1,6 +1,7 @@
 """Status check ABC and built-in implementations."""
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -181,7 +182,8 @@ class DataSourceRate(StatusCheck):
         self._threshold = threshold
         self._log_path = (
             Path(log_path) if log_path is not None
-            else Path("data/log/api_calls.parquet")
+            else Path(os.environ.get("INSTOCK_API_CALL_LOG",
+                                     "data/log/api_calls.parquet"))
         )
 
     def run(self) -> StatusRow:
