@@ -43,3 +43,12 @@ def test_empty_data_yellow():
                         columns=["date", "code", "value", "fwd_ret"]
                     ))
     assert chk.run().status == "YELLOW"
+
+
+def test_loader_exception_red():
+    def boom(name):
+        raise RuntimeError("ohlcv unavailable")
+    chk = ICIRDecay(factor="mom_5d", frame_loader=boom)
+    row = chk.run()
+    assert row.status == "RED"
+    assert "ohlcv unavailable" in row.message
