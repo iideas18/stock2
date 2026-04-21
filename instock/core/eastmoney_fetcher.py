@@ -10,6 +10,10 @@ import time
 import random
 from urllib.parse import urlparse, urlunparse
 from instock.core.singleton_proxy import proxys
+from instock.core import eastmoney_cookie_store as cookie_store
+
+
+DEFAULT_COOKIE = 'st_si=78948464251292; st_psi=20260205091253851-119144370567-1089607836; st_pvi=07789985376191; st_sp=2026-02-05%2009%3A11%3A13; st_inirUrl=https%3A%2F%2Fxuangu.eastmoney.com%2FResult; st_sn=12; st_asi=20260205091253851-119144370567-1089607836-webznxg.dbssk.qxg-1'
 
 __author__ = 'myh '
 __date__ = '2025/12/31 '
@@ -33,23 +37,15 @@ class eastmoney_fetcher:
         获取东方财富网的Cookie
         优先级：环境变量 > 文件 > 默认Cookie
         """
-        # 1. 尝试从环境变量获取
-        cookie = os.environ.get('EAST_MONEY_COOKIE')
-        if cookie:
-            # print("环境变量中的Cookie: 已设置")
-            return cookie
+        env_cookie = os.environ.get('EAST_MONEY_COOKIE')
+        if env_cookie:
+            return env_cookie
 
-        # 2. 尝试从文件获取
-        cookie_file = Path(os.path.join(self.base_dir, 'config', 'eastmoney_cookie.txt'))
-        if cookie_file.exists():
-            with open(cookie_file, 'r') as f:
-                cookie = f.read().strip()
-            if cookie:
-                # print("文件中的Cookie: 已设置")
-                return cookie
+        file_cookie = cookie_store.read_cookie_file(cookie_store.COOKIE_FILE)
+        if file_cookie:
+            return file_cookie
 
-        # 3. 默认Cookie（可能过期，仅作为备选）
-        return 'st_si=78948464251292; st_psi=20260205091253851-119144370567-1089607836; st_pvi=07789985376191; st_sp=2026-02-05%2009%3A11%3A13; st_inirUrl=https%3A%2F%2Fxuangu.eastmoney.com%2FResult; st_sn=12; st_asi=20260205091253851-119144370567-1089607836-webznxg.dbssk.qxg-1'
+        return DEFAULT_COOKIE
 
     def _create_session(self):
         """创建并配置会话"""
