@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Strategies</title></head>
+<body>
+<h1>Strategies</h1>
+{% if not strategies %}
+  <p>No strategies found.</p>
+{% else %}
+  <ul>
+    {% for s in strategies %}
+      <li><a href="/strategies/{{ s }}">{{ s }}</a></li>
+    {% end %}
+  </ul>
+{% end %}
+</body></html>

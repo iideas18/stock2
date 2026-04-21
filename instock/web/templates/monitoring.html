@@ -1,0 +1,31 @@
+<!-- instock/web/templates/monitoring.html -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Monitoring</title>
+<style>
+ .GREEN {background:#dfd} .YELLOW {background:#ffd} .RED {background:#fdd}
+ .ACK {background:#ddf}
+</style></head>
+<body>
+<h1>Monitoring</h1>
+<table border="1" cellspacing="0" cellpadding="4">
+  <tr><th>name</th><th>status</th><th>metric</th><th>message</th>
+      <th>as_of</th><th>ack</th></tr>
+  {% for r in rows %}
+    <tr class="{{ r['raw_status'] }}">
+      <td>{{ r['name'] }}</td>
+      <td>{{ r['status'] }}</td>
+      <td>{{ r['metric_value'] if r['metric_value'] is not None else "" }}</td>
+      <td>{{ r['message'] }}</td>
+      <td>{{ r['as_of'] }}</td>
+      <td>
+        {% if r['raw_status'] == 'RED' and not r['ack'] %}
+          <form method="post" action="/monitoring/ack" style="margin:0">
+            <input type="hidden" name="check_name" value="{{ r['name'] }}">
+            <button type="submit">ACK</button>
+          </form>
+        {% end %}
+      </td>
+    </tr>
+  {% end %}
+</table>
+</body></html>

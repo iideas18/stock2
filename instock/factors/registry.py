@@ -19,5 +19,8 @@ def get_all() -> dict[str, Factor]:
 
 
 def clear_registry() -> None:
-    """Test helper."""
+    """Test helper: drop all registered factors and reset bootstrap flag."""
     _REGISTRY.clear()
+    # Reset bootstrap flag so register_default_factors() works again after a clear.
+    from instock.factors import bootstrap
+    bootstrap._REGISTERED = False

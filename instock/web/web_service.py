@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 #%%
 import logging
+import os
 import os.path
 import sys
 from abc import ABC
@@ -30,6 +31,19 @@ import instock.web.dataIndicatorsHandler as dataIndicatorsHandler
 import instock.web.base as webBase
 import instock.web.limitupReasonMindmapHandler as limitupReasonMindmapHandler
 import instock.web.fetchHistHandler as fetchHistHandler
+import tornado.web
+from instock.web.handlers.factor_handler import (
+    FactorDetailHandler, FactorListHandler,
+)
+from instock.web.handlers.strategy_handler import (
+    StrategyDetailHandler, StrategyListHandler,
+)
+from instock.web.handlers.backtest_handler import (
+    BacktestDetailHandler, BacktestListHandler,
+)
+from instock.web.handlers.monitoring_handler import (
+    MonitoringAckHandler, MonitoringHandler,
+)
 
 __author__ = 'myh '
 __date__ = '2023/3/10 '
@@ -60,6 +74,22 @@ class Application(tornado.web.Application):
             (r"/instock/api_fetch_hist_batch_status", fetchHistHandler.FetchHistBatchStatusHandler),
             (r"/instock/api_run_daily_job_start", fetchHistHandler.RunDailyJobStartHandler),
             (r"/instock/api_run_daily_job_status", fetchHistHandler.RunDailyJobStatusHandler),
+
+            # Sub-project 4: research portal routes.
+            (r"/factors", FactorListHandler),
+            (r"/factors/([^/]+)", FactorDetailHandler),
+            (r"/strategies", StrategyListHandler),
+            (r"/strategies/([^/]+)", StrategyDetailHandler),
+            (r"/backtests", BacktestListHandler),
+            (r"/backtests/([^/]+)", BacktestDetailHandler),
+            (r"/monitoring", MonitoringHandler),
+            (r"/monitoring/ack", MonitoringAckHandler),
+
+            # Static artifacts outside the default static_path.
+            (r"/static/runs/(.*)", tornado.web.StaticFileHandler,
+             {"path": os.environ.get("INSTOCK_BACKTEST_ROOT", "data/backtests") + "/runs"}),
+            (r"/static/factor_reports/(.*)", tornado.web.StaticFileHandler,
+             {"path": "data/factor_reports"}),
         ]
         settings = dict(  # 配置
             template_path=os.path.join(os.path.dirname(__file__), "templates"),

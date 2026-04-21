@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Factor {{ name }}</title></head>
+<body>
+<p><a href="/factors">&larr; factors</a></p>
+<h1>{{ name }}</h1>
+<p>{{ description }}</p>
+<p>Latest date: {{ latest if latest else "no data yet" }}</p>
+<p>Rows in last 30d: {{ n_rows }}</p>
+{% if report_url %}
+  <iframe src="{{ report_url }}" style="width:100%;height:800px;"
+          frameborder="0"></iframe>
+{% else %}
+  <p><em>No evaluator report on disk.</em></p>
+{% end %}
+</body></html>
