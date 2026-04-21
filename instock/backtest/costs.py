@@ -43,3 +43,23 @@ class StandardFeeModel(FeeModel):
 class ZeroFeeModel(FeeModel):
     def compute(self, value: float, side: str) -> dict:
         return {"commission": 0.0, "stamp_tax": 0.0, "transfer_fee": 0.0}
+
+
+class SlippageModel(ABC):
+    @abstractmethod
+    def fill_price(self, open_price: float, side: str) -> float:
+        """Return realized fill price given T+1 open price."""
+
+
+class BpsSlippage(SlippageModel):
+    def __init__(self, bps: float = 5.0) -> None:
+        self.bps = bps
+
+    def fill_price(self, open_price: float, side: str) -> float:
+        sign = 1.0 if side == "BUY" else -1.0
+        return float(open_price * (1.0 + sign * self.bps * 1e-4))
+
+
+class ZeroSlippage(SlippageModel):
+    def fill_price(self, open_price: float, side: str) -> float:
+        return float(open_price)
