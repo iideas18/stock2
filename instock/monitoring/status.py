@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 import pandas as pd
@@ -162,3 +163,54 @@ def _default_icir_loader(factor: str) -> pd.DataFrame:
     df = df.copy()
     df["fwd_ret"] = float("nan")
     return df.dropna(subset=["fwd_ret"])
+
+
+class DataSourceRate(StatusCheck):
+    """Success rate of recent data source calls. Missing log = YELLOW."""
+
+    def __init__(
+        self,
+        source: str,
+        window_hours: float = 24.0,
+        threshold: float = 0.9,
+        log_path: Path | None = None,
+    ) -> None:
+        self.name = f"datasource.{source}"
+        self._source = source
+        self._window_hours = window_hours
+        self._threshold = threshold
+        self._log_path = (
+            Path(log_path) if log_path is not None
+            else Path("data/log/api_calls.parquet")
+        )
+
+    def run(self) -> StatusRow:
+        now = pd.Timestamp.now()
+        if not self._log_path.exists():
+            return StatusRow(
+                name=self.name, status="YELLOW",
+                message="no data yet", metric_value=None, as_of=now,
+            )
+        try:
+            df = pd.read_parquet(self._log_path)
+        except Exception as exc:
+            return StatusRow(
+                name=self.name, status="RED",
+                message=f"log load failed: {exc}",
+                metric_value=None, as_of=now,
+            )
+        cutoff = now - pd.Timedelta(hours=self._window_hours)
+        window = df[(df["source"] == self._source) & (df["ts"] >= cutoff)]
+        if window.empty:
+            return StatusRow(
+                name=self.name, status="YELLOW",
+                message="no calls in window",
+                metric_value=None, as_of=now,
+            )
+        rate = float(window["ok"].mean())
+        status = "GREEN" if rate >= self._threshold else "RED"
+        return StatusRow(
+            name=self.name, status=status,
+            message=f"ok_rate={rate:.3f} over {len(window)} calls",
+            metric_value=rate, as_of=now,
+        )
