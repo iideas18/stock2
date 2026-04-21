@@ -35,6 +35,10 @@ class AlertStateStore:
             "as_of": row.as_of,
             "recorded_at": pd.Timestamp.now(),
         }], columns=_COLUMNS)
+        # Pin metric_value to float64 so a None-only row doesn't propagate an
+        # object dtype into concat (which would trigger a pandas FutureWarning
+        # about all-NA columns participating in dtype resolution).
+        new = new.astype({"metric_value": "float64"})
         existing = self._read()
         df = new if existing.empty else pd.concat(
             [existing, new], ignore_index=True
