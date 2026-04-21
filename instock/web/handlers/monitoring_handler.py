@@ -8,6 +8,7 @@ import pandas as pd
 import tornado.web
 
 from instock.monitoring import get_monitoring_root
+from instock.monitoring.registry_bootstrap import register_default_checks
 from instock.monitoring.runner import run_all_checks
 from instock.monitoring.state import AlertStateStore
 from instock.monitoring.status import StatusRow
@@ -35,6 +36,7 @@ def _ack_merged(row: StatusRow, store: AlertStateStore) -> dict:
 
 class MonitoringHandler(tornado.web.RequestHandler):
     def get(self) -> None:
+        register_default_checks()
         store = AlertStateStore(get_monitoring_root())
         rows = [_ack_merged(r, store) for r in run_all_checks()]
         self.render("monitoring.html", rows=rows)

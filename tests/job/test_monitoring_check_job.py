@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+from instock.monitoring import registry_bootstrap
 from instock.monitoring import runner as rn
 from instock.monitoring.status import StatusCheck, StatusRow
 
@@ -20,12 +21,23 @@ class _FixedStatus(StatusCheck):
 
 @pytest.fixture(autouse=True)
 def _reg():
+    registry_bootstrap._REGISTERED = False
     rn.clear_registry()
     yield
+    registry_bootstrap._REGISTERED = False
     rn.clear_registry()
 
 
-def test_first_red_fires_webhook(tmp_path, monkeypatch):
+@pytest.fixture
+def _skip_bootstrap():
+    """For tests that pre-register their own checks; make the in-job
+    register_default_checks() call a no-op so our manual check survives."""
+    registry_bootstrap._REGISTERED = True
+    yield
+    registry_bootstrap._REGISTERED = False
+
+
+def test_first_red_fires_webhook(tmp_path, monkeypatch, _skip_bootstrap):
     monkeypatch.setenv("INSTOCK_MONITORING_ROOT", str(tmp_path))
     monkeypatch.setenv("INSTOCK_WEBHOOK_URL", "http://x")
     rn.register_check(_FixedStatus("c1", "RED"))
@@ -40,7 +52,7 @@ def test_first_red_fires_webhook(tmp_path, monkeypatch):
     assert posted[0][1]["name"] == "c1"
 
 
-def test_consecutive_red_does_not_fire(tmp_path, monkeypatch):
+def test_consecutive_red_does_not_fire(tmp_path, monkeypatch, _skip_bootstrap):
     monkeypatch.setenv("INSTOCK_MONITORING_ROOT", str(tmp_path))
     monkeypatch.setenv("INSTOCK_WEBHOOK_URL", "http://x")
     rn.register_check(_FixedStatus("c1", "RED"))
@@ -55,7 +67,7 @@ def test_consecutive_red_does_not_fire(tmp_path, monkeypatch):
     assert len(posted) == 1
 
 
-def test_green_then_red_fires(tmp_path, monkeypatch):
+def test_green_then_red_fires(tmp_path, monkeypatch, _skip_bootstrap):
     monkeypatch.setenv("INSTOCK_MONITORING_ROOT", str(tmp_path))
     monkeypatch.setenv("INSTOCK_WEBHOOK_URL", "http://x")
     chk = _FixedStatus("c1", "GREEN")
@@ -72,7 +84,7 @@ def test_green_then_red_fires(tmp_path, monkeypatch):
     assert len(posted) == 1
 
 
-def test_empty_url_no_post(tmp_path, monkeypatch):
+def test_empty_url_no_post(tmp_path, monkeypatch, _skip_bootstrap):
     monkeypatch.setenv("INSTOCK_MONITORING_ROOT", str(tmp_path))
     monkeypatch.setenv("INSTOCK_WEBHOOK_URL", "")
     rn.register_check(_FixedStatus("c1", "RED"))
@@ -84,3 +96,27 @@ def test_empty_url_no_post(tmp_path, monkeypatch):
     )
     job.run_once()
     assert posted == []
+
+
+def test_run_once_bootstraps_default_checks(tmp_path, monkeypatch):
+    """Fresh process: registry empty, run_once() must register + run defaults."""
+    import warnings
+    monkeypatch.setenv("INSTOCK_MONITORING_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSTOCK_WEBHOOK_URL", "")
+    # Ensure a true "fresh process" state: no registry, no bootstrap flag.
+    registry_bootstrap._REGISTERED = False
+    rn.clear_registry()
+    try:
+        from instock.job import monitoring_check_job as job
+        # state.py uses pd.concat with mixed-dtype rows; harmless pre-existing
+        # FutureWarning unrelated to this fix.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            job.run_once()
+        alerts = tmp_path / "_alerts.parquet"
+        assert alerts.exists(), "expected _alerts.parquet to be written"
+        df = pd.read_parquet(alerts)
+        assert not df.empty, "expected at least one default check row"
+    finally:
+        registry_bootstrap._REGISTERED = False
+        rn.clear_registry()

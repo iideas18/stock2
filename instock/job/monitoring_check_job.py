@@ -6,6 +6,7 @@ import os
 import sys
 
 from instock.monitoring import get_monitoring_root
+from instock.monitoring.registry_bootstrap import register_default_checks
 from instock.monitoring.runner import run_all_checks
 from instock.monitoring.state import AlertStateStore
 from instock.monitoring.webhook import post_webhook
@@ -14,6 +15,7 @@ log = logging.getLogger(__name__)
 
 
 def run_once() -> int:
+    register_default_checks()
     url = os.environ.get("INSTOCK_WEBHOOK_URL", "")
     store = AlertStateStore(get_monitoring_root())
     fired = 0

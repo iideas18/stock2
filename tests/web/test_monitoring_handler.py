@@ -8,6 +8,7 @@ import pandas as pd
 import tornado.testing
 import tornado.web
 
+from instock.monitoring import registry_bootstrap
 from instock.monitoring import runner as rn
 from instock.monitoring.status import StatusCheck, StatusRow
 from instock.web.handlers.monitoring_handler import (
@@ -43,9 +44,12 @@ class TestMonitoring(tornado.testing.AsyncHTTPTestCase):
         os.environ["INSTOCK_MONITORING_ROOT"] = str(self.tmp)
         rn.clear_registry()
         rn.register_check(_RedCheck())
+        # Prevent handler's register_default_checks() from wiping our manual check.
+        registry_bootstrap._REGISTERED = True
 
     def tearDown(self):
         super().tearDown()
+        registry_bootstrap._REGISTERED = False
         rn.clear_registry()
 
     def get_app(self):
@@ -68,3 +72,32 @@ class TestMonitoring(tornado.testing.AsyncHTTPTestCase):
         # page now shows (ack'd)
         resp = self.fetch("/monitoring")
         assert b"ack" in resp.body.lower()
+
+
+class TestMonitoringBootstrapsDefaults(tornado.testing.AsyncHTTPTestCase):
+    """Fresh-process scenario: no manual register_check, GET /monitoring must
+    still render default checks (handler must bootstrap them)."""
+
+    def setUp(self):
+        super().setUp()
+        self.tmp = Path(tempfile.mkdtemp())
+        os.environ["INSTOCK_MONITORING_ROOT"] = str(self.tmp)
+        registry_bootstrap._REGISTERED = False
+        rn.clear_registry()
+
+    def tearDown(self):
+        super().tearDown()
+        registry_bootstrap._REGISTERED = False
+        rn.clear_registry()
+
+    def get_app(self):
+        tp = Path(__file__).resolve().parents[2] / "instock/web/templates"
+        return _App(tp)
+
+    def test_default_checks_visible(self):
+        resp = self.fetch("/monitoring")
+        assert resp.code == 200
+        body = resp.body
+        assert (
+            b"datasource.akshare" in body or b"backtest.metrics" in body
+        ), "expected a default check name in dashboard body"
