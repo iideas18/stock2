@@ -606,3 +606,14 @@ docker rmi mayanghua/instock:latest library/mariadb:latest
 股市有风险投资需谨慎，本系统只能用于学习、股票分析，投资盈亏概不负责。
 
 本系统中的表格为第三方商业控件，仅使用了评估版进行学习及测试。
+
+
+### Sub-4 (Research Web & Monitoring) env vars
+
+| Variable | Default | Notes |
+|---|---|---|
+| `INSTOCK_MONITORING_ROOT` | `data/monitoring` | Alert state parquet root |
+| `INSTOCK_WEBHOOK_URL`     | *(empty)* | If empty, webhook disabled |
+| `INSTOCK_API_CALL_LOG`    | `data/log/api_calls.parquet` | Structured call log |
+| `INSTOCK_BACKTEST_ROOT`   | `data/backtests` | Consumed by backtest list handler |
+| `INSTOCK_HOLDING_ROOT`    | `data/holdings` | Consumed by strategy handler |
