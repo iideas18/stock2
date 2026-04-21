@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Backtests</title></head>
+<body>
+<h1>Backtest runs</h1>
+{% if not rows %}
+  <p>No runs yet.</p>
+{% else %}
+  <table border="1" cellspacing="0" cellpadding="4">
+    <tr><th>run_id</th><th>strategy</th><th>start</th><th>end</th>
+        <th>sharpe</th><th>max_dd</th></tr>
+    {% for r in rows %}
+      <tr>
+        <td><a href="/backtests/{{ r['run_id'] }}">{{ r['run_id'] }}</a></td>
+        <td>{{ r.get('strategy', '') }}</td>
+        <td>{{ r.get('start_date', '') }}</td>
+        <td>{{ r.get('end_date', '') }}</td>
+        <td>{{ r.get('sharpe', '') }}</td>
+        <td>{{ r.get('max_dd', '') }}</td>
+      </tr>
+    {% end %}
+  </table>
+{% end %}
+</body></html>
