@@ -112,7 +112,8 @@ class StrategyPipeline:
 
         resolver = config.universe_resolver or _default_universe_resolver()
 
-        ohlcv = self._load_ohlcv_panel(start, end)
+        panel_codes = resolver(start)
+        ohlcv = self._load_ohlcv_panel(panel_codes, start, end)
         fctx = self._build_filter_context(ohlcv, start)
 
         rows = []
@@ -182,19 +183,19 @@ class StrategyPipeline:
         return panel
 
     def _load_ohlcv_panel(
-        self, start: date, end: date
+        self, codes: list[str], start: date, end: date,
     ) -> pd.DataFrame:
-        """Fetch an OHLCV panel covering [start - 120d, end] for filter use.
+        """Fetch OHLCV panel via OhlcvPanelStore (cache-first).
 
         120-day lookback is a conservative buffer for NewListingFilter(60).
-        Note: passes "ALL" as code; the akshare source today fetches per-code.
-        Sub-3 backtester will replace this with a proper batch loader.
-        Unit tests monkeypatch `get_source().get_ohlcv` to bypass this.
+        Unit tests may monkeypatch `get_source().get_ohlcv` to bypass this.
         """
+        from instock.refdata.ohlcv_store import OhlcvPanelStore
         source = get_source()
+        store = OhlcvPanelStore(source=source)
         lookback = start - timedelta(days=120)
         try:
-            return source.get_ohlcv("ALL", lookback, end)  # type: ignore[arg-type]
+            return store.get_panel(codes, lookback, end)
         except Exception as exc:
             log.warning("failed to load OHLCV panel: %s", exc)
             return pd.DataFrame(columns=["date", "code", "volume"])
