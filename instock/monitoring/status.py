@@ -125,7 +125,10 @@ class ICIRDecay(StatusCheck):
         window = df[df["date"] >= cutoff]
         ic_per_day = (
             window.groupby("date")
-            .apply(lambda g: g["value"].corr(g["fwd_ret"], method="spearman"))
+            .apply(
+                lambda g: g["value"].corr(g["fwd_ret"], method="spearman"),
+                include_groups=False,
+            )
             .dropna()
         )
         if len(ic_per_day) < 5:
