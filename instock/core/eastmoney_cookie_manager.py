@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 import requests
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, Error as PlaywrightError
 
 from instock.core import eastmoney_cookie_store as cookie_store
 
@@ -185,32 +185,38 @@ def acquire_cookie_via_browser(browser_name: str, timeout_seconds: int, playwrig
     target_url = "https://quote.eastmoney.com/center/gridlist.html#hs_a_board"
     if playwright_factory is None:
         playwright_factory = sync_playwright
-    with playwright_factory() as pw:
-        if browser_name == "chromium":
-            browser = pw.chromium.launch()
-        elif browser_name == "chrome":
-            browser = pw.chromium.launch(channel="chrome")
-        else:
-            browser = pw.chromium.launch(channel="msedge")
+    try:
+        with playwright_factory() as pw:
+            if browser_name == "chromium":
+                browser = pw.chromium.launch()
+            elif browser_name == "chrome":
+                browser = pw.chromium.launch(channel="chrome")
+            else:
+                browser = pw.chromium.launch(channel="msedge")
 
-        context = browser.new_context()
-        page = context.new_page()
-        try:
-            page.goto(target_url, wait_until="domcontentloaded")
-            deadline = now_fn() + timeout_seconds
-            return acquire_cookie_from_context(
-                context=context,
-                page=page,
-                browser=browser,
-                deadline=deadline,
-                now_fn=now_fn,
-                sleep_fn=sleep_fn,
-                validate_fn=validate_fn,
-            )
-        finally:
-            close_ctx = getattr(context, "close", None)
-            if callable(close_ctx):
-                close_ctx()
-            close_browser = getattr(browser, "close", None)
-            if callable(close_browser):
-                close_browser()
+            context = browser.new_context()
+            page = context.new_page()
+            try:
+                page.goto(target_url, wait_until="domcontentloaded")
+                deadline = now_fn() + timeout_seconds
+                return acquire_cookie_from_context(
+                    context=context,
+                    page=page,
+                    browser=browser,
+                    deadline=deadline,
+                    now_fn=now_fn,
+                    sleep_fn=sleep_fn,
+                    validate_fn=validate_fn,
+                )
+            finally:
+                close_ctx = getattr(context, "close", None)
+                if callable(close_ctx):
+                    close_ctx()
+                close_browser = getattr(browser, "close", None)
+                if callable(close_browser):
+                    close_browser()
+    except PlaywrightError as exc:
+        lowered = str(exc).lower()
+        if "executable" in lowered or "channel" in lowered:
+            return AcquisitionResult(exit_code=2, cookie=None, validation_reason="browser-not-available")
+        raise

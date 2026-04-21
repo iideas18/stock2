@@ -348,8 +348,39 @@ abc:123456@65.1.244.232:3128
 注意：以上均为无效代理。
 
 ### 8.设置东方财富网Cookie
-东方财富数据获取频率过高，会限制获取数据，可以通过注入cookie解决。
-以下是详细的操作步骤：
+
+东方财富数据获取频率过高时，建议优先使用仓库内置脚本自动采集并更新 Cookie：
+
+先安装 Python 依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+```bash
+python instock/job/update_eastmoney_cookie.py --write file
+python instock/job/update_eastmoney_cookie.py --write env
+python instock/job/update_eastmoney_cookie.py --write both
+```
+
+首次使用前需要安装浏览器运行时：
+
+```bash
+python -m playwright install chromium
+```
+
+说明：
+
+- `--write file`：写入 `instock/config/eastmoney_cookie.txt`
+- `--write env`：输出 `export EAST_MONEY_COOKIE='...'` 到 stdout，方便直接 `eval`/`source`
+- `--write both`：同时完成两者；注意运行时仍然以环境变量为准
+- 日志与告警统一走 `stderr`（以 `WARNING:` 作为前缀），导出命令与 Cookie 值只走 `stdout`
+- `chromium` 为默认且保证支持的通道；`chrome` / `msedge` 依赖本机安装对应浏览器
+- Cookie 过期后可直接重复运行同一条命令刷新；建议每周或在抓取失败时主动更新一次
+- 浏览器通道可通过 `--browser chromium|chrome|msedge` 指定，超时通过 `--timeout` 秒数指定
+
+如果你更习惯手工方式，下面保留原来的开发者工具复制方案作为 fallback：
+
 ```
 1、获取Cookie
     打开浏览器，访问东方财富网行情页面：https://quote.eastmoney.com/center/gridlist.html#hs_a_board
@@ -375,6 +406,7 @@ abc:123456@65.1.244.232:3128
     定期更新：建议每隔一段时间（如每周）更新一次Cookie，以确保爬取的稳定性
     多账号轮换：如果有多个东方财富网账号，可以轮换使用不同账号的Cookie，进一步降低被限制的风险
 ```
+
 ### 9.安装自动交易（可选）
 
 ```
