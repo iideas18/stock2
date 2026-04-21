@@ -35,3 +35,19 @@ def test_config_override_fees_off():
     )
     assert c.enable_fees is False
     assert c.enable_slippage is False
+
+
+def test_config_to_dict_cross_instance_deterministic():
+    c1 = BacktestConfig(strategy="x", start=date(2023, 1, 4), end=date(2023, 12, 29))
+    c2 = BacktestConfig(strategy="x", start=date(2023, 1, 4), end=date(2023, 12, 29))
+    assert json.dumps(c1.to_dict(), sort_keys=True) == json.dumps(c2.to_dict(), sort_keys=True)
+
+
+def test_config_is_frozen():
+    import dataclasses
+
+    import pytest
+
+    c = BacktestConfig(strategy="x", start=date(2023, 1, 4), end=date(2023, 12, 29))
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        c.strategy = "y"  # type: ignore[misc]

@@ -4,7 +4,7 @@ Serialized into fingerprint input so config changes propagate to run_id.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from datetime import date
 from typing import Tuple
 
