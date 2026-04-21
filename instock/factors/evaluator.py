@@ -51,18 +51,17 @@ def evaluate_from_frames(
             return np.nan
         return g["value"].rank().corr(g["ret"].rank())
 
-    ic_series = merged.groupby("date").apply(_ic)
-    rank_ic_series = merged.groupby("date").apply(_rank_ic)
+    ic_series = merged.groupby("date").apply(_ic, include_groups=False)
+    rank_ic_series = merged.groupby("date").apply(_rank_ic, include_groups=False)
     ic_mean = float(ic_series.mean())
     rank_ic_mean = float(rank_ic_series.mean())
     ic_std = float(ic_series.std(ddof=0))
     ic_ir = 0.0 if ic_std == 0 else ic_mean / ic_std
 
-    def _assign_group(g):
-        g = g.copy()
-        g["grp"] = pd.qcut(g["value"], q=n_groups, labels=False, duplicates="drop")
-        return g
-    grouped = merged.groupby("date", group_keys=False).apply(_assign_group)
+    def _assign_group(s: pd.Series) -> pd.Series:
+        return pd.qcut(s, q=n_groups, labels=False, duplicates="drop")
+    grouped = merged.copy()
+    grouped["grp"] = grouped.groupby("date")["value"].transform(_assign_group)
     group_returns = (
         grouped.groupby(["date", "grp"])["ret"].mean().unstack().mean(axis=0)
     ).to_frame("mean_return")

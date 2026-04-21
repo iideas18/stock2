@@ -7,13 +7,17 @@ def winsorize(
     df: pd.DataFrame, lower: float = 0.01, upper: float = 0.99
 ) -> pd.DataFrame:
     """Clip per-date value distribution to [lower-quantile, upper-quantile]."""
-    def _clip(g: pd.DataFrame) -> pd.DataFrame:
-        lo = g["value"].quantile(lower)
-        hi = g["value"].quantile(upper)
-        g = g.copy()
-        g["value"] = g["value"].clip(lo, hi)
-        return g
-    return df.groupby("date", group_keys=False).apply(_clip)
+    def _lo(s: pd.Series) -> float:
+        return s.quantile(lower)
+
+    def _hi(s: pd.Series) -> float:
+        return s.quantile(upper)
+
+    lo = df.groupby("date")["value"].transform(_lo)
+    hi = df.groupby("date")["value"].transform(_hi)
+    out = df.copy()
+    out["value"] = out["value"].clip(lo, hi)
+    return out
 
 
 def neutralize(
@@ -36,13 +40,12 @@ def neutralize(
 
 
 def zscore(df: pd.DataFrame) -> pd.DataFrame:
-    def _zs(g: pd.DataFrame) -> pd.DataFrame:
-        mean = g["value"].mean()
-        std = g["value"].std(ddof=0)
-        g = g.copy()
-        g["value"] = 0.0 if std == 0 else (g["value"] - mean) / std
-        return g
-    return df.groupby("date", group_keys=False).apply(_zs)
+    mean = df.groupby("date")["value"].transform("mean")
+    std = df.groupby("date")["value"].transform(lambda s: s.std(ddof=0))
+    out = df.copy()
+    out["value"] = (df["value"] - mean) / std
+    out["value"] = out["value"].where(std != 0, 0.0)
+    return out
 
 
 def default_pipeline(
