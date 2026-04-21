@@ -136,7 +136,29 @@
 
 ---
 
-### Sub-project 3 ⏳ 回测与交易模拟引擎
+### Sub-project 3 ✅ 回测与交易模拟引擎（已合并，tag `subproject-3-backtest-engine-mvp`）
+
+**实际交付**（MVP）：
+- `instock/backtest/` 包：schemas + config + costs + constraints + portfolio_state
+  + execution + engine + storage + benchmarks + metrics + fingerprint
+  + walkforward + report（template.html）
+- `instock/job/backtest_run_job.py` CLI 入口
+- Sub-2 pipeline `_load_ohlcv_panel` 替换为 `OhlcvPanelStore` 注入（清 Sub-2.5 遗留）
+- 真数据冒烟测试（`INSTOCK_SUB3_SMOKE=1`）
+
+**测试**: 全套 195 passed, 6 skipped（含 smoke / real-data 跳过项）。
+
+**MVP 验收已达成**：
+- 在 2023-07 → 2023-12 窗口跑通；trades/nav/metrics/report 全产出
+- 手续费 / 滑点可 CLI 关闭
+- fingerprint 双跑一致（单测）
+- HTML 报告含 refdata 水印
+
+**follow-up**: `docs/superpowers/followups/subproject-3-backtest-engine.md`
+
+---
+
+### ~~Sub-project 3 ⏳ 回测与交易模拟引擎~~  <!-- 旧文案保留为历史记录 -->
 **定位**: 在 Sub-2 产出的持仓清单上做严格的历史回测，这是 alpha 研究可信度的决定性环节。
 
 **核心交付**：
@@ -241,7 +263,7 @@ Sub-1 (数据与因子) ─┬─> Sub-2 (选股组合) ─┬─> Sub-3 (回测
 | 1 | 数据与因子工程 | 能造因子、能存、能评估 | ✅ 已合并 | 17（实际） |
 | 2 | 选股与组合构建 | 因子 → 可下单权重 | ✅ 已合并 | 13（实际） |
 | 2.5 | 数据层对齐 | refdata + OhlcvPanelStore + factor bootstrap | ✅ 已合并 | 14（实际） |
-| 3 | 回测与交易模拟 | 策略历史可验证 | 🎯 下一步 | ~12–15 |
+| 3 | 回测与交易模拟 | 策略历史可验证 | ✅ 已合并 | 18（实际） |
 | 4 | Web 交互 & 监控 | 研究员日常入口 | ⏳ | ~15–20 |
 
 *实际 task 数以各子项目单独 plan 为准。
