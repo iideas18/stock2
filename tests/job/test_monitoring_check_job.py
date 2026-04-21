@@ -113,9 +113,11 @@ def test_run_once_bootstraps_default_checks(tmp_path, monkeypatch):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FutureWarning)
             job.run_once()
-        alerts = tmp_path / "_alerts.parquet"
-        assert alerts.exists(), "expected _alerts.parquet to be written"
-        df = pd.read_parquet(alerts)
+        alerts_dir = tmp_path / "_alerts"
+        assert alerts_dir.exists(), "expected _alerts/ partition dir"
+        parts = list(alerts_dir.glob("*.parquet"))
+        assert parts, "expected at least one partition"
+        df = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
         assert not df.empty, "expected at least one default check row"
     finally:
         registry_bootstrap._REGISTERED = False

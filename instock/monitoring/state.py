@@ -1,7 +1,18 @@
-"""Append-only Parquet store for monitoring rows."""
+"""Append-only Parquet store for monitoring rows.
+
+Storage layout:
+    <root>/_alerts/<YYYY-MM>.parquet
+
+Each record appends to its month partition only, so total I/O per record
+is O(rows in current month) rather than O(total history). Records carry
+an int64 ``recorded_at`` nanosecond timestamp (via ``time.time_ns()``)
+that is strictly monotonic within a process, giving deterministic
+ordering across records recorded in the same millisecond.
+"""
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -16,34 +27,64 @@ _COLUMNS = [
 ]
 
 
+def _partition_for(recorded_at_ns: int) -> str:
+    return pd.Timestamp(recorded_at_ns, unit="ns").strftime("%Y-%m")
+
+
 class AlertStateStore:
     def __init__(self, root: Path) -> None:
-        self._path = Path(root) / "_alerts.parquet"
-        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._dir = Path(root) / "_alerts"
+        self._dir.mkdir(parents=True, exist_ok=True)
+        # One-time migration from the legacy single-file layout.
+        legacy = Path(root) / "_alerts.parquet"
+        if legacy.exists() and not any(self._dir.glob("*.parquet")):
+            df = pd.read_parquet(legacy)
+            if not df.empty and "recorded_at" in df.columns:
+                df = df.copy()
+                df["recorded_at"] = df["recorded_at"].apply(
+                    lambda v: (
+                        int(pd.Timestamp(v).value)
+                        if not isinstance(v, (int,)) else int(v)
+                    )
+                )
+                df["_part"] = df["recorded_at"].apply(_partition_for)
+                for part, g in df.groupby("_part"):
+                    g.drop(columns=["_part"]).to_parquet(
+                        self._dir / f"{part}.parquet", index=False,
+                    )
+            legacy.unlink()
+
+    def _partition_path(self, recorded_at_ns: int) -> Path:
+        return self._dir / f"{_partition_for(recorded_at_ns)}.parquet"
 
     def _read(self) -> pd.DataFrame:
-        if not self._path.exists():
+        frames = []
+        for p in sorted(self._dir.glob("*.parquet")):
+            frames.append(pd.read_parquet(p))
+        if not frames:
             return pd.DataFrame(columns=_COLUMNS)
-        return pd.read_parquet(self._path)
+        return pd.concat(frames, ignore_index=True)
 
     def record(self, row: StatusRow) -> None:
+        # time.time_ns() is strictly monotonic within a process on Linux.
+        recorded_at = time.time_ns()
         new = pd.DataFrame([{
             "check_name": row.name,
             "status": row.status,
             "message": row.message,
             "metric_value": row.metric_value,
             "as_of": row.as_of,
-            "recorded_at": pd.Timestamp.now(),
+            "recorded_at": recorded_at,
         }], columns=_COLUMNS)
-        # Pin metric_value to float64 so a None-only row doesn't propagate an
-        # object dtype into concat (which would trigger a pandas FutureWarning
-        # about all-NA columns participating in dtype resolution).
-        new = new.astype({"metric_value": "float64"})
-        existing = self._read()
-        df = new if existing.empty else pd.concat(
-            [existing, new], ignore_index=True
-        )
-        df.to_parquet(self._path, index=False)
+        new = new.astype({"metric_value": "float64", "recorded_at": "int64"})
+
+        target = self._partition_path(recorded_at)
+        if target.exists():
+            existing = pd.read_parquet(target)
+            df = pd.concat([existing, new], ignore_index=True)
+        else:
+            df = new
+        df.to_parquet(target, index=False)
 
     def last_status(self, check_name: str) -> StatusRow | None:
         df = self._read()
