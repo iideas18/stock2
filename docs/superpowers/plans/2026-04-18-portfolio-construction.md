@@ -1021,12 +1021,13 @@ def test_max_weight_noop_when_under_cap():
 
 
 def test_max_weight_clips_and_redistributes():
-    # One name at 60%, caps at 30%; the 30% overflow should redistribute
+    # One name at 60%, caps at 40%; the 20% overflow should redistribute
     # to the other two (originally 20% each) proportionally.
+    # (Cap 0.4 chosen so 3 * 0.4 = 1.2 >= 1.0 is feasible.)
     w = pd.Series({"A00001": 0.6, "B00002": 0.2, "C00003": 0.2})
-    out = MaxWeightConstraint(0.3).apply(w, _ctx())
+    out = MaxWeightConstraint(0.4).apply(w, _ctx())
     assert abs(out.sum() - 1.0) < 1e-9
-    assert out["A00001"] <= 0.3 + 1e-9
+    assert out["A00001"] <= 0.4 + 1e-9
     # B, C equally split the redistributed weight, so still equal
     assert abs(out["B00002"] - out["C00003"]) < 1e-9
 

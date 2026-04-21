@@ -9,7 +9,10 @@ import pandera.pandas as pa
 
 
 class BacktestValidationError(Exception):
-    """Raised when a backtest DataFrame violates its schema contract."""
+    """Raised when a backtest DataFrame violates its schema contract.
+
+    Will be raised by validate_*_invariants helpers added alongside storage (Task 9).
+    """
 
 
 _CODE_RE = r"^\d{6}$"
@@ -93,7 +96,7 @@ METRICS_SCHEMA = pa.DataFrameSchema(
         "total_cost_bps": pa.Column(float, pa.Check.ge(0.0)),
         "lot_drag_bps": pa.Column(float),
         "fingerprint_sha": pa.Column(str, pa.Check.str_length(min_value=8)),
-        "refdata_as_of": pa.Column(str, nullable=True),
+        "refdata_as_of": pa.Column(str, nullable=True),  # ISO date string; tracks refdata snapshot age for audit
     },
     coerce=True,
     strict=False,

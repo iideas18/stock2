@@ -104,3 +104,48 @@ def test_metrics_schema_valid():
         "refdata_as_of": "2026-04-18",
     }])
     METRICS_SCHEMA.validate(df)
+
+
+def test_position_schema_rejects_negative_shares():
+    df = pd.DataFrame([{
+        "date": pd.Timestamp("2023-01-03"),
+        "code": "600000",
+        "shares": -10,
+        "avg_cost": 10.0,
+        "market_value": 0.0,
+        "unrealized_pnl": 0.0,
+        "weight": 0.0,
+    }])
+    with pytest.raises(pa.errors.SchemaError):
+        POSITION_SCHEMA.validate(df)
+
+
+def test_nav_schema_rejects_non_positive_nav():
+    df = pd.DataFrame([{
+        "date": pd.Timestamp("2023-01-03"),
+        "nav": 0.0,
+        "cash": 0.0, "position_value": 0.0, "total_value": 1.0,
+        "ret_daily": 0.0, "ret_cum": 0.0,
+        "turnover_daily": 0.0, "n_holdings": 0,
+    }])
+    with pytest.raises(pa.errors.SchemaError):
+        NAV_SCHEMA.validate(df)
+
+
+def test_metrics_schema_rejects_positive_drawdown():
+    df = pd.DataFrame([{
+        "run_id": "x_abcd1234", "strategy": "x",
+        "start": pd.Timestamp("2023-01-04"),
+        "end": pd.Timestamp("2023-12-29"),
+        "ret_annual": 0.1, "ret_total": 0.1, "vol_annual": 0.1,
+        "sharpe": 1.0, "sortino": 1.0,
+        "max_drawdown": 0.5,  # POSITIVE -> should fail
+        "max_dd_duration_days": 10, "calmar": 1.0,
+        "win_rate_daily": 0.5, "win_rate_monthly": 0.5,
+        "turnover_annual": 1.0, "total_cost_bps": 10.0,
+        "lot_drag_bps": 0.0,
+        "fingerprint_sha": "a" * 64,
+        "refdata_as_of": "2026-04-18",
+    }])
+    with pytest.raises(pa.errors.SchemaError):
+        METRICS_SCHEMA.validate(df)
