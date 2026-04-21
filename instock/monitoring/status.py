@@ -151,19 +151,42 @@ class ICIRDecay(StatusCheck):
 
 
 def _default_icir_loader(factor: str) -> pd.DataFrame:
-    # Best-effort: wire into Sub-1 read_factor + Sub-2.5 ohlcv cache.
-    # Kept intentionally minimal; unit tests inject a loader instead.
+    """Read factor values and join next-day returns from the ohlcv cache.
+
+    Fwd return is computed per code as the pct change from the factor's
+    value date close to the next trading day's close, read from the cached
+    Parquet partitions at `<INSTOCK_OHLCV_ROOT>/<year>.parquet`. Missing
+    ohlcv → empty DataFrame so the check degrades to YELLOW.
+    """
     from instock.factors.storage import read_factor
+
     end = pd.Timestamp.now()
     start = end - pd.Timedelta(days=90)
     df = read_factor(factor, start, end)
     if df.empty:
         return df
-    # Fwd return from ohlcv cache is environment-dependent; return empty
-    # fwd_ret so that the check degrades to YELLOW when ohlcv not available.
+
+    ohlcv_root = Path(os.environ.get("INSTOCK_OHLCV_ROOT", "data/ohlcv"))
+    years = range(int(df["date"].min().year), int(df["date"].max().year) + 2)
+    frames = []
+    for y in years:
+        p = ohlcv_root / f"{y}.parquet"
+        if p.exists():
+            frames.append(pd.read_parquet(p, columns=["date", "code", "close"]))
+    if not frames:
+        return df.iloc[0:0].assign(fwd_ret=pd.Series(dtype="float64"))
+
+    ohlcv = pd.concat(frames, ignore_index=True)
+    ohlcv["date"] = pd.to_datetime(ohlcv["date"])
+    ohlcv = ohlcv.sort_values(["code", "date"]).reset_index(drop=True)
+    ohlcv["fwd_close"] = ohlcv.groupby("code")["close"].shift(-1)
+    ohlcv["fwd_ret"] = ohlcv["fwd_close"] / ohlcv["close"] - 1.0
+    fwd = ohlcv[["date", "code", "fwd_ret"]].dropna(subset=["fwd_ret"])
+
     df = df.copy()
-    df["fwd_ret"] = float("nan")
-    return df.dropna(subset=["fwd_ret"])
+    df["date"] = pd.to_datetime(df["date"])
+    merged = df.merge(fwd, on=["date", "code"], how="inner")
+    return merged
 
 
 class DataSourceRate(StatusCheck):
