@@ -89,7 +89,7 @@ class Application(tornado.web.Application):
             (r"/static/runs/(.*)", tornado.web.StaticFileHandler,
              {"path": os.environ.get("INSTOCK_BACKTEST_ROOT", "data/backtests") + "/runs"}),
             (r"/static/factor_reports/(.*)", tornado.web.StaticFileHandler,
-             {"path": "data/factor_reports"}),
+             {"path": os.environ.get("INSTOCK_FACTOR_REPORTS_ROOT", "data/factor_reports")}),
         ]
         settings = dict(  # 配置
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
