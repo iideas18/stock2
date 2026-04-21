@@ -1,15 +1,11 @@
 """Status check ABC and built-in implementations."""
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Callable
 
 import pandas as pd
-
-log = logging.getLogger(__name__)
 
 _STATUSES = ("GREEN", "YELLOW", "RED", "ACK")
 
