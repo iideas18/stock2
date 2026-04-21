@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Factors</title></head>
+<body>
+<h1>Registered factors</h1>
+{% if not factors %}
+  <p>No factors registered.</p>
+{% else %}
+  <ul>
+  {% for f in factors %}
+    <li><a href="/factors/{{ f['name'] }}">{{ f['name'] }}</a>
+        — {{ f['description'] }}</li>
+  {% end %}
+  </ul>
+{% end %}
+</body></html>
