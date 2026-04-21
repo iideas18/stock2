@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Backtest {{ run_id }}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+         margin: 2em auto; max-width: 1000px; color: #222; }
+  h1, h2 { border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+  table { border-collapse: collapse; margin: 1em 0; }
+  th, td { border: 1px solid #ccc; padding: 4px 10px; text-align: right; }
+  th { background: #f0f0f0; }
+  .watermark { color: #999; font-size: 0.8em; margin-top: 2em; }
+  img { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<h1>Backtest Report: {{ run_id }}</h1>
+
+<h2>Metrics</h2>
+<table>
+<tr><th>Metric</th><th>Value</th></tr>
+{% for k, v in metrics.items() %}
+  <tr><td style="text-align:left">{{ k }}</td><td>{{ v }}</td></tr>
+{% endfor %}
+</table>
+
+<h2>NAV Curve</h2>
+{% if nav_chart %}
+  <img src="data:image/png;base64,{{ nav_chart }}" alt="NAV curve">
+{% else %}
+  <p>No NAV data.</p>
+{% endif %}
+
+<h2>Drawdown</h2>
+{% if dd_chart %}
+  <img src="data:image/png;base64,{{ dd_chart }}" alt="Drawdown">
+{% endif %}
+
+<h2>Refdata</h2>
+{% if refdata_as_of %}
+  <p>refdata as of {{ refdata_as_of }}; historical ST/industry approximated.</p>
+{% else %}
+  <p>refdata not available.</p>
+{% endif %}
+
+<div class="watermark">
+Fingerprint: {{ fingerprint_prefix }}
+</div>
+
+</body>
+</html>
